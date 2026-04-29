@@ -28,6 +28,7 @@ interface Store extends AppState {
   setDimensions: (w: number, h: number) => void
   setCirclePosition: (role: CircleRole, x: number, y: number) => void
   setNoiseIntensity: (value: number) => void
+  setNoiseScale: (value: number) => void
   moveLayer: (role: CircleRole, direction: 'up' | 'down') => void
   resetCircle: (role: CircleRole) => void
   resetAll: () => void
@@ -49,6 +50,7 @@ export const useStore = create<Store>((set, get) => ({
   darkBackground: true,
   showLogo: false,
   noiseIntensity: DEFAULT_NOISE,
+  noiseScale: 1,
   layerOrder: DEFAULT_LAYER_ORDER,
   circles: makeCircles('day', DEFAULT_WIDTH, DEFAULT_HEIGHT),
 
@@ -80,6 +82,7 @@ export const useStore = create<Store>((set, get) => ({
     }),
 
   setNoiseIntensity: (value) => set({ noiseIntensity: Math.min(1, Math.max(0, value)) }),
+  setNoiseScale: (value) => set({ noiseScale: Math.min(3, Math.max(0.1, value)) }),
 
   moveLayer: (role, direction) =>
     set((s) => {
@@ -108,6 +111,7 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       circles: makeCircles(s.theme, s.width, s.height),
       noiseIntensity: DEFAULT_NOISE,
+      noiseScale: 1,
       layerOrder: DEFAULT_LAYER_ORDER,
     })),
 

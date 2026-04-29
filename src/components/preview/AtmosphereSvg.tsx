@@ -15,18 +15,16 @@ const LOGO_VIEWBOX_WIDTH = 965.8955
 const LOGO_VIEWBOX_HEIGHT = 299.9957
 
 export function AtmosphereSvg({ scale, displayWidth, displayHeight }: Props) {
-  const { width: W, height: H, circles, layerOrder, showGuides, draggingRole, noiseIntensity, darkBackground, showLogo } = useStore()
+  const { width: W, height: H, circles, layerOrder, showGuides, draggingRole, noiseIntensity, noiseScale, darkBackground, showLogo } = useStore()
   const bgColor = darkBackground ? '#000000' : '#ffffff'
   const orderedCircles = layerOrder.map((role) => circles.find((c) => c.role === role)!)
   const radius = computeRadius(W, H)
   const blur = computeDefaultBlur(W, H)
 
-  // Normalize noise frequency based on canvas size
-  // Reference: 1920px canvas should have baseFrequency of 0.75
-  const REFERENCE_SIZE = 1920
-  const BASE_FREQUENCY = 0.75
-  const canvasSize = Math.max(W, H)
-  const normalizedFrequency = (BASE_FREQUENCY * canvasSize) / REFERENCE_SIZE
+  // Calculate noise frequency with user-adjustable scale
+  // Higher scale = finer grain, lower scale = coarser grain
+  const BASE_FREQUENCY = 0.65
+  const frequency = BASE_FREQUENCY * noiseScale
 
   function filterAttrs(b: number) {
     const pad = Math.ceil((b * 4 / Math.max(radius, 1)) * 100) + 60
@@ -58,7 +56,7 @@ export function AtmosphereSvg({ scale, displayWidth, displayHeight }: Props) {
           <feGaussianBlur in="SourceGraphic" stdDeviation={blur.toFixed(1)} />
         </filter>
         <filter id="noise-filter" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
-          <feTurbulence type="fractalNoise" baseFrequency={normalizedFrequency.toFixed(4)} numOctaves={4} stitchTiles="stitch" result="noise" />
+          <feTurbulence type="fractalNoise" baseFrequency={frequency.toFixed(4)} numOctaves={4} stitchTiles="stitch" result="noise" />
           <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise" />
           <feComponentTransfer in="grayNoise" result="scaledNoise">
             <feFuncR type="linear" slope="1" intercept="0" />

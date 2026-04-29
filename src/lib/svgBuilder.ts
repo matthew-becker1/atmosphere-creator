@@ -12,18 +12,15 @@ function filterAttrs(blur: number, radius: number): string {
 }
 
 export function buildSvgString(state: AppState, forExport = false): string {
-  const { width: W, height: H, circles, layerOrder, theme, noiseIntensity, darkBackground, showLogo } = state
+  const { width: W, height: H, circles, layerOrder, theme, noiseIntensity, noiseScale, darkBackground, showLogo } = state
   const bgColor = darkBackground ? '#000000' : '#ffffff'
   const orderedCircles = layerOrder.map((role) => circles.find((c) => c.role === role)!)
   const radius = computeRadius(W, H)
   const blur = computeDefaultBlur(W, H)
 
-  // Normalize noise frequency based on canvas size
-  // Reference: 1920px canvas should have baseFrequency of 0.75
-  const REFERENCE_SIZE = 1920
-  const BASE_FREQUENCY = 0.75
-  const canvasSize = Math.max(W, H)
-  const normalizedFrequency = (BASE_FREQUENCY * canvasSize) / REFERENCE_SIZE
+  // Calculate noise frequency with user-adjustable scale
+  const BASE_FREQUENCY = 0.65
+  const frequency = BASE_FREQUENCY * noiseScale
 
   const xml = forExport ? '<?xml version="1.0" encoding="UTF-8"?>\n' : ''
   const xmlns = forExport ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ''
@@ -70,7 +67,7 @@ export function buildSvgString(state: AppState, forExport = false): string {
       <feGaussianBlur in="SourceGraphic" stdDeviation="${blur.toFixed(1)}"/>
     </filter>
     <filter id="noise-filter" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="${normalizedFrequency.toFixed(4)}" numOctaves="4" stitchTiles="stitch" result="noise"/>
+      <feTurbulence type="fractalNoise" baseFrequency="${frequency.toFixed(4)}" numOctaves="4" stitchTiles="stitch" result="noise"/>
       <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise"/>
       <feComponentTransfer in="grayNoise" result="scaledNoise">
         <feFuncR type="linear" slope="1" intercept="0"/>
