@@ -6,6 +6,8 @@ export function PreviewArea() {
   const { width, height } = useStore()
   const { containerRef, scale, displayWidth, displayHeight } = useCanvasFit(width, height)
 
+  console.log("[v0] PreviewArea render:", { width, height, scale, displayWidth, displayHeight })
+
   return (
     <div ref={containerRef} className="flex-1 flex flex-col items-center justify-center min-h-0 p-8">
       <div
