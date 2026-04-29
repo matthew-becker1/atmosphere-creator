@@ -29,7 +29,6 @@ interface Store extends AppState {
   setCirclePosition: (role: CircleRole, x: number, y: number) => void
   setNoiseIntensity: (value: number) => void
   moveLayer: (role: CircleRole, direction: 'up' | 'down') => void
-  resetCircle: (role: CircleRole) => void
   resetAll: () => void
   toggleGuides: () => void
   setDraggingRole: (role: CircleRole | null) => void
@@ -87,19 +86,6 @@ export const useStore = create<Store>((set, get) => ({
       if (swapIdx < 0 || swapIdx > 2) return {}
       ;[order[idx], order[swapIdx]] = [order[swapIdx], order[idx]]
       return { layerOrder: order }
-    }),
-
-  resetCircle: (role) =>
-    set((s) => {
-      const idx = s.circles.findIndex((c) => c.role === role)
-      const anchor = DEFAULT_ANCHORS[role]
-      const updated = [...s.circles] as AppState['circles']
-      updated[idx] = {
-        ...s.circles[idx],
-        x: anchor.x * s.width,
-        y: anchor.y * s.height,
-      }
-      return { circles: updated }
     }),
 
   resetAll: () =>
