@@ -18,6 +18,7 @@ export interface AppState {
   draggingRole: CircleRole | null
   noiseIntensity: number
   darkBackground: boolean
+  showLogo: boolean
   layerOrder: [CircleRole, CircleRole, CircleRole]
   circles: [CircleState, CircleState, CircleState]
 }

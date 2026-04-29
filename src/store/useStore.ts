@@ -34,6 +34,7 @@ interface Store extends AppState {
   toggleGuides: () => void
   setDraggingRole: (role: CircleRole | null) => void
   toggleBackground: () => void
+  toggleLogo: () => void
 }
 
 const DEFAULT_WIDTH = 1080
@@ -46,6 +47,7 @@ export const useStore = create<Store>((set, get) => ({
   showGuides: false,
   draggingRole: null,
   darkBackground: true,
+  showLogo: false,
   noiseIntensity: DEFAULT_NOISE,
   layerOrder: DEFAULT_LAYER_ORDER,
   circles: makeCircles('day', DEFAULT_WIDTH, DEFAULT_HEIGHT),
@@ -112,4 +114,5 @@ export const useStore = create<Store>((set, get) => ({
   toggleGuides: () => set((s) => ({ showGuides: !s.showGuides })),
   setDraggingRole: (role) => set({ draggingRole: role }),
   toggleBackground: () => set((s) => ({ darkBackground: !s.darkBackground })),
+  toggleLogo: () => set((s) => ({ showLogo: !s.showLogo })),
 }))

@@ -80,6 +80,21 @@ export function LeftPanel() {
           </div>
 
           <NoiseControl />
+
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-white/40 mb-2">Logo Overlay</label>
+            <button
+              onClick={state.toggleLogo}
+              className={`w-full px-3 py-2 rounded text-sm transition-colors ${
+                state.showLogo
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80'
+              }`}
+            >
+              {state.showLogo ? 'Logo On' : 'Logo Off'}
+            </button>
+          </div>
+
           <GuideToggle />
 
           <button
