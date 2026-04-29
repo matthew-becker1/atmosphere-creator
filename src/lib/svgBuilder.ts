@@ -18,6 +18,13 @@ export function buildSvgString(state: AppState, forExport = false): string {
   const radius = computeRadius(W, H)
   const blur = computeDefaultBlur(W, H)
 
+  // Normalize noise frequency based on canvas size
+  // Reference: 1920px canvas should have baseFrequency of 0.75
+  const REFERENCE_SIZE = 1920
+  const BASE_FREQUENCY = 0.75
+  const canvasSize = Math.max(W, H)
+  const normalizedFrequency = (BASE_FREQUENCY * canvasSize) / REFERENCE_SIZE
+
   const xml = forExport ? '<?xml version="1.0" encoding="UTF-8"?>\n' : ''
   const xmlns = forExport ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ''
   const comment = forExport
@@ -63,7 +70,7 @@ export function buildSvgString(state: AppState, forExport = false): string {
       <feGaussianBlur in="SourceGraphic" stdDeviation="${blur.toFixed(1)}"/>
     </filter>
     <filter id="noise-filter" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch" result="noise"/>
+      <feTurbulence type="fractalNoise" baseFrequency="${normalizedFrequency.toFixed(4)}" numOctaves="4" stitchTiles="stitch" result="noise"/>
       <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise"/>
       <feComponentTransfer in="grayNoise" result="scaledNoise">
         <feFuncR type="linear" slope="1" intercept="0"/>
