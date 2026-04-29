@@ -16,8 +16,6 @@ export function AtmosphereSvg({ scale, displayWidth, displayHeight }: Props) {
   const radius = computeRadius(W, H)
   const blur = computeDefaultBlur(W, H)
 
-  console.log("[v0] AtmosphereSvg:", { displayWidth, displayHeight, radius, blur, circleColors: orderedCircles.map(c => c.color), circlePositions: orderedCircles.map(c => ({ x: c.x, y: c.y })) })
-
   function filterAttrs(b: number) {
     const pad = Math.ceil((b * 4 / Math.max(radius, 1)) * 100) + 60
     return {

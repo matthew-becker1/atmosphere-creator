@@ -40,7 +40,7 @@ const DEFAULT_WIDTH = 1080
 const DEFAULT_HEIGHT = 1920
 
 export const useStore = create<Store>((set, get) => ({
-  theme: 'twilight',
+  theme: 'day',
   width: DEFAULT_WIDTH,
   height: DEFAULT_HEIGHT,
   showGuides: false,
@@ -48,7 +48,7 @@ export const useStore = create<Store>((set, get) => ({
   darkBackground: true,
   noiseIntensity: DEFAULT_NOISE,
   layerOrder: DEFAULT_LAYER_ORDER,
-  circles: makeCircles('twilight', DEFAULT_WIDTH, DEFAULT_HEIGHT),
+  circles: makeCircles('day', DEFAULT_WIDTH, DEFAULT_HEIGHT),
 
   setTheme: (theme) =>
     set((s) => ({
