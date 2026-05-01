@@ -422,8 +422,21 @@ export function PreviewArea() {
         <DesignerPanel />
       </FloatingPanel>
 
+      {/* Top bar with dimensions */}
+      <div className="flex-shrink-0 flex justify-center py-4">
+        <div className="flex items-center gap-3">
+          <PresetDropdown />
+          <div className="flex items-center gap-1 text-white/40">
+            <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
+            <span className="text-xs">×</span>
+            <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
+          </div>
+          <span className="text-xs font-mono text-white/25">{Math.round(scale * 100)}%</span>
+        </div>
+      </div>
+
       {/* Canvas area - fills available space and centers content */}
-      <div className="flex-1 flex items-center justify-center p-8 min-h-0">
+      <div className="flex-1 flex items-center justify-center px-8 min-h-0">
         <div
           className="relative group"
           style={{
@@ -448,28 +461,14 @@ export function PreviewArea() {
         </div>
       </div>
 
-      {/* Bottom bar with specs, themes, background toggle */}
-      <div className="flex-shrink-0 border-t border-white/5 bg-neutral-900/50 px-6 py-3">
-        <div className="flex items-center justify-between">
-          {/* Left: Specs */}
-          <div className="flex items-center gap-3">
-            <PresetDropdown />
-            <div className="flex items-center gap-1 text-white/40">
-              <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
-              <span className="text-xs">×</span>
-              <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
-            </div>
-            <span className="text-xs font-mono text-white/25">{Math.round(scale * 100)}%</span>
-          </div>
-
-          {/* Center: Themes */}
+      {/* Bottom bar with themes and background toggle */}
+      <div className="flex-shrink-0 flex justify-center py-4">
+        <div className="flex items-center gap-6">
           <div className="flex items-center gap-1">
             {THEME_NAMES.map((name) => (
               <ThemeSwatch key={name} name={name} />
             ))}
           </div>
-
-          {/* Right: Background toggle */}
           <BackgroundToggle />
         </div>
       </div>
