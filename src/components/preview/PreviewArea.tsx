@@ -377,6 +377,48 @@ function ZoomInput({ scale, setScale, resetToFit, isManualScale }: {
 
 const THEME_NAMES: ThemeName[] = ['twilight', 'dawn', 'morning', 'day']
 
+function LogoToggle() {
+  const showLogo = useStore((s) => s.showLogo)
+  const toggleLogo = useStore((s) => s.toggleLogo)
+
+  return (
+    <button
+      onClick={toggleLogo}
+      className={`mr-6 flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+        showLogo ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+      }`}
+      title="Toggle logo"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M9 12h6M12 9v6" />
+      </svg>
+      <span className="text-[10px] uppercase tracking-wide">Logo</span>
+    </button>
+  )
+}
+
+function GuidesToggle() {
+  const showGuides = useStore((s) => s.showGuides)
+  const toggleGuides = useStore((s) => s.toggleGuides)
+
+  return (
+    <button
+      onClick={toggleGuides}
+      className={`ml-6 flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+        showGuides ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+      }`}
+      title="Toggle guides"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 3v18M3 12h18" />
+      </svg>
+      <span className="text-[10px] uppercase tracking-wide">Guides</span>
+    </button>
+  )
+}
+
 function ThemeSwatch({ name }: { name: ThemeName }) {
   const currentTheme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
@@ -493,8 +535,11 @@ export function PreviewArea() {
         </div>
       </div>
 
-      {/* Canvas area - fills available space and centers content */}
+      {/* Canvas area with side toggles */}
       <div ref={containerRef} className="flex-1 flex items-center justify-center px-8 min-h-0 overflow-hidden">
+        {/* Logo toggle - left side */}
+        <LogoToggle />
+
         <div
           className="relative group"
           style={{
@@ -519,6 +564,9 @@ export function PreviewArea() {
             <ResizeHandle position="sw" onMouseDown={handleMouseDown('sw')} />
           </div>
         </div>
+
+        {/* Guides toggle - right side */}
+        <GuidesToggle />
       </div>
 
       {/* Bottom bar with themes and background toggle */}
