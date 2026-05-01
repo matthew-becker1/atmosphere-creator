@@ -317,6 +317,64 @@ function DimensionInput({ value, onChange, label }: { value: number; onChange: (
   )
 }
 
+function ZoomInput({ scale, setScale, resetToFit, isManualScale }: { 
+  scale: number
+  setScale: (v: number) => void
+  resetToFit: () => void
+  isManualScale: boolean 
+}) {
+  const [localValue, setLocalValue] = useState(String(Math.round(scale * 100)))
+  const [isFocused, setIsFocused] = useState(false)
+
+  const handleBlur = () => {
+    setIsFocused(false)
+    const num = parseInt(localValue, 10)
+    if (!isNaN(num) && num >= 5 && num <= 200) {
+      setScale(num / 100)
+    } else {
+      setLocalValue(String(Math.round(scale * 100)))
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur()
+    }
+  }
+
+  // Sync with external scale changes
+  if (!isFocused && localValue !== String(Math.round(scale * 100))) {
+    setLocalValue(String(Math.round(scale * 100)))
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="text"
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className="w-8 bg-transparent text-center text-xs text-white/40 font-mono 
+          border-b border-transparent hover:border-white/20 focus:border-white/40 
+          focus:text-white focus:outline-none transition-colors"
+        title="Zoom %"
+      />
+      <span className="text-xs text-white/25">%</span>
+      {isManualScale && (
+        <button
+          onClick={resetToFit}
+          className="ml-1 text-[10px] text-white/30 hover:text-white/60 transition-colors"
+          title="Reset to fit"
+        >
+          Fit
+        </button>
+      )}
+    </div>
+  )
+}
+
 const THEME_NAMES: ThemeName[] = ['twilight', 'dawn', 'morning', 'day']
 
 function ThemeSwatch({ name }: { name: ThemeName }) {
@@ -405,7 +463,7 @@ function ResizeHandle({
 export function PreviewArea() {
   const { width, height } = useStore()
   const setDimensions = useStore((s) => s.setDimensions)
-  const { containerRef, scale, displayWidth, displayHeight } = useCanvasFit(width, height)
+  const { containerRef, scale, setScale, resetToFit, isManualScale, displayWidth, displayHeight } = useCanvasFit(width, height)
   const { handleMouseDown } = useCanvasResize(scale)
   
   const [exportOpen, setExportOpen] = useState(false)
@@ -423,7 +481,7 @@ export function PreviewArea() {
       </FloatingPanel>
 
       {/* Top bar with dimensions */}
-      <div className="flex-shrink-0 flex justify-center py-4">
+      <div className="flex-shrink-0 flex justify-center py-3">
         <div className="flex items-center gap-3">
           <PresetDropdown />
           <div className="flex items-center gap-1 text-white/40">
@@ -431,7 +489,7 @@ export function PreviewArea() {
             <span className="text-xs">×</span>
             <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
           </div>
-          <span className="text-xs font-mono text-white/25">{Math.round(scale * 100)}%</span>
+          <ZoomInput scale={scale} setScale={setScale} resetToFit={resetToFit} isManualScale={isManualScale} />
         </div>
       </div>
 

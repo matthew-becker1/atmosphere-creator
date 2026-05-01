@@ -1,46 +1,68 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react'
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 
-function computeScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number) {
-  const paddingX = 80  // horizontal padding
-  const paddingY = 160 // vertical padding (accounts for top bar, bottom bar, and margins)
-  const scaleX = (containerWidth - paddingX) / canvasWidth
-  const scaleY = (containerHeight - paddingY) / canvasHeight
-  // No cap - always fit to available space
+function computeFitScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number) {
+  const paddingX = 100
+  const paddingY = 40 // minimal vertical padding since top/bottom bars are outside this container
+  const availableW = containerWidth - paddingX
+  const availableH = containerHeight - paddingY
+  if (availableW <= 0 || availableH <= 0) return 0.1
+  const scaleX = availableW / canvasWidth
+  const scaleY = availableH / canvasHeight
   return Math.min(scaleX, scaleY)
 }
 
 export function useCanvasFit(width: number, height: number) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [scale, setScale] = useState(0.5)
+  const [fitScale, setFitScale] = useState(0.5)
+  const [manualScale, setManualScale] = useState<number | null>(null)
 
-  // Calculate initial scale on mount
-  useLayoutEffect(() => {
+  const scale = manualScale ?? fitScale
+
+  // Calculate fit scale on mount and resize
+  const updateFitScale = useCallback(() => {
     const el = containerRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
     if (rect.width > 0 && rect.height > 0) {
-      setScale(computeScale(rect.width, rect.height, width, height))
+      const newFit = computeFitScale(rect.width, rect.height, width, height)
+      setFitScale(newFit)
+      // Reset manual scale when canvas dimensions change
+      setManualScale(null)
     }
   }, [width, height])
+
+  useLayoutEffect(() => {
+    updateFitScale()
+  }, [updateFitScale])
 
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
-    const observer = new ResizeObserver((entries) => {
-      const { width: cw, height: ch } = entries[0].contentRect
-      if (cw > 0 && ch > 0) {
-        setScale(computeScale(cw, ch, width, height))
-      }
+    const observer = new ResizeObserver(() => {
+      updateFitScale()
     })
 
     observer.observe(el)
     return () => observer.disconnect()
-  }, [width, height])
+  }, [updateFitScale])
+
+  const setScale = useCallback((newScale: number) => {
+    const clamped = Math.max(0.05, Math.min(2, newScale))
+    setManualScale(clamped)
+  }, [])
+
+  const resetToFit = useCallback(() => {
+    setManualScale(null)
+  }, [])
 
   return {
     containerRef,
     scale,
+    fitScale,
+    setScale,
+    resetToFit,
+    isManualScale: manualScale !== null,
     displayWidth: Math.round(width * scale),
     displayHeight: Math.round(height * scale),
   }
