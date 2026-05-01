@@ -4,10 +4,39 @@ import { useCanvasFit } from '../../hooks/useCanvasFit'
 import { useCanvasResize } from '../../hooks/useCanvasResize'
 import { AtmosphereSvg } from './AtmosphereSvg'
 import { THEMES } from '../../constants/themes'
+import { PRESETS } from '../../constants/presets'
 import type { ThemeName } from '../../types'
 
 const HANDLE_SIZE = 10
 const EDGE_SIZE = 6
+
+function PresetDropdown() {
+  const { width, height, setDimensions } = useStore()
+  const activePreset = PRESETS.find((p) => p.width === width && p.height === height)
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const [w, h] = e.target.value.split('x').map(Number)
+    setDimensions(w, h)
+  }
+
+  return (
+    <select
+      value={activePreset ? `${width}x${height}` : ''}
+      onChange={handleChange}
+      className="bg-white/5 text-white/60 text-xs rounded px-2 py-1 outline-none cursor-pointer 
+        hover:bg-white/10 hover:text-white/80 transition-colors border-none appearance-none
+        pr-6 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMyA1TDYgOEw5IDUiIHN0cm9rZT0iI2ZmZmZmZjgwIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+')] 
+        bg-no-repeat bg-[right_6px_center]"
+    >
+      {!activePreset && <option value="" className="bg-neutral-900">Custom</option>}
+      {PRESETS.map((p) => (
+        <option key={p.label} value={`${p.width}x${p.height}`} className="bg-neutral-900">
+          {p.label}
+        </option>
+      ))}
+    </select>
+  )
+}
 
 function DimensionInput({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
   const [localValue, setLocalValue] = useState(String(value))
@@ -159,13 +188,15 @@ export function PreviewArea() {
 
   return (
     <div ref={containerRef} className="flex-1 flex flex-col items-center justify-center min-h-0 p-8">
-      {/* Dimensions above canvas */}
-      <div className="mb-3 flex items-center gap-1 text-white/40">
-        <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
-        <span className="text-xs">×</span>
-        <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
-        <span className="text-xs ml-2">·</span>
-        <span className="text-xs ml-2 font-mono">{Math.round(scale * 100)}%</span>
+      {/* Dimensions and preset above canvas */}
+      <div className="mb-3 flex items-center gap-3 text-white/40">
+        <PresetDropdown />
+        <div className="flex items-center gap-1">
+          <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
+          <span className="text-xs">×</span>
+          <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
+        </div>
+        <span className="text-xs font-mono text-white/30">{Math.round(scale * 100)}%</span>
       </div>
 
       <div

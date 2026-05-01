@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useStore } from '../../store/useStore'
-import { PresetSelector } from '../controls/PresetSelector'
 import { GuideToggle } from '../controls/GuideToggle'
 import { LayerOrder } from '../controls/LayerOrder'
 import { NoiseControl } from '../controls/NoiseControl'
@@ -77,8 +76,6 @@ export function LeftPanel() {
             <h1 className="text-sm font-semibold text-white tracking-wide">Atmosphere</h1>
             <p className="text-xs text-white/30">Gradient Generator</p>
           </div>
-
-          <PresetSelector />
 
           {advancedUnlocked && (
             <>
