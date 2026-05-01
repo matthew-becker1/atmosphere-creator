@@ -470,7 +470,7 @@ export function PreviewArea() {
   const [designerOpen, setDesignerOpen] = useState(false)
 
   return (
-    <div ref={containerRef} className="flex-1 relative flex flex-col min-h-0 bg-neutral-950">
+    <div className="flex-1 relative flex flex-col min-h-0 bg-neutral-950">
       {/* Floating panels */}
       <FloatingPanel title="Export" isOpen={exportOpen} onToggle={() => setExportOpen(!exportOpen)} position="right">
         <ExportPanel />
@@ -494,7 +494,7 @@ export function PreviewArea() {
       </div>
 
       {/* Canvas area - fills available space and centers content */}
-      <div className="flex-1 flex items-center justify-center px-8 min-h-0">
+      <div ref={containerRef} className="flex-1 flex items-center justify-center px-8 min-h-0 overflow-hidden">
         <div
           className="relative group"
           style={{
