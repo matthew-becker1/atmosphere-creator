@@ -15,37 +15,51 @@ export function useCanvasFit(width: number, height: number) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [fitScale, setFitScale] = useState(0.5)
   const [manualScale, setManualScale] = useState<number | null>(null)
+  const lastContainerSize = useRef({ w: 0, h: 0 })
 
   const scale = manualScale ?? fitScale
 
-  // Calculate fit scale on mount and resize
-  const updateFitScale = useCallback(() => {
+  // Compute fit scale without triggering re-renders during drag
+  const computeAndSetFit = useCallback((containerW: number, containerH: number) => {
+    const newFit = computeFitScale(containerW, containerH, width, height)
+    setFitScale(newFit)
+  }, [width, height])
+
+  // Initial calculation and when container resizes
+  useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
     if (rect.width > 0 && rect.height > 0) {
-      const newFit = computeFitScale(rect.width, rect.height, width, height)
-      setFitScale(newFit)
-      // Reset manual scale when canvas dimensions change
-      setManualScale(null)
+      lastContainerSize.current = { w: rect.width, h: rect.height }
+      computeAndSetFit(rect.width, rect.height)
     }
-  }, [width, height])
+  }, [computeAndSetFit])
 
-  useLayoutEffect(() => {
-    updateFitScale()
-  }, [updateFitScale])
+  // Recalculate when canvas dimensions change (use last known container size)
+  useEffect(() => {
+    const { w, h } = lastContainerSize.current
+    if (w > 0 && h > 0) {
+      computeAndSetFit(w, h)
+    }
+  }, [width, height, computeAndSetFit])
 
+  // Watch for container resize
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
-    const observer = new ResizeObserver(() => {
-      updateFitScale()
+    const observer = new ResizeObserver((entries) => {
+      const { width: cw, height: ch } = entries[0].contentRect
+      if (cw > 0 && ch > 0) {
+        lastContainerSize.current = { w: cw, h: ch }
+        computeAndSetFit(cw, ch)
+      }
     })
 
     observer.observe(el)
     return () => observer.disconnect()
-  }, [updateFitScale])
+  }, [computeAndSetFit])
 
   const setScale = useCallback((newScale: number) => {
     const clamped = Math.max(0.05, Math.min(2, newScale))
