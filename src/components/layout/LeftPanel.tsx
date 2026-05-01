@@ -8,7 +8,7 @@ import { LayerOrder } from '../controls/LayerOrder'
 import { NoiseControl } from '../controls/NoiseControl'
 import { SpecsPanel } from './SpecsPanel'
 import { buildSvgString } from '../../lib/svgBuilder'
-import { exportSvg, exportPng } from '../../lib/exportPng'
+import { exportSvg, exportPng, exportWebp, exportJpg } from '../../lib/exportPng'
 
 const FIGMA_NOISE_INSTRUCTIONS = `To match noise in Figma:
 1. Draw a rect over the full frame
@@ -23,9 +23,12 @@ Changing it may create compositions that don't match the approved system.
 
 Only proceed if you have a specific creative reason.`
 
+type ExportFormat = 'png' | 'webp' | 'jpg'
+
 export function LeftPanel() {
   const state = useStore()
-  const [pngScale, setPngScale] = useState<1 | 2>(2)
+  const [rasterScale, setRasterScale] = useState<1 | 2>(2)
+  const [rasterFormat, setRasterFormat] = useState<ExportFormat>('png')
   const [showNoisePopup, setShowNoisePopup] = useState(false)
   const [showAdvancedConfirm, setShowAdvancedConfirm] = useState(false)
   const [advancedUnlocked, setAdvancedUnlocked] = useState(false)
@@ -37,10 +40,18 @@ export function LeftPanel() {
     setShowNoisePopup(true)
   }
 
-  const handlePngExport = async () => {
+  const handleRasterExport = async () => {
     const svg = buildSvgString(state, true)
-    const suffix = pngScale === 2 ? '@2x' : ''
-    await exportPng(svg, state.width, state.height, `atmosphere-${state.theme}-${state.width}x${state.height}${suffix}.png`, pngScale)
+    const suffix = rasterScale === 2 ? '@2x' : ''
+    const filename = `atmosphere-${state.theme}-${state.width}x${state.height}${suffix}.${rasterFormat}`
+    
+    if (rasterFormat === 'png') {
+      await exportPng(svg, state.width, state.height, filename, rasterScale)
+    } else if (rasterFormat === 'webp') {
+      await exportWebp(svg, state.width, state.height, filename, rasterScale)
+    } else {
+      await exportJpg(svg, state.width, state.height, filename, rasterScale)
+    }
     setShowNoisePopup(true)
   }
 
@@ -72,14 +83,17 @@ export function LeftPanel() {
           <PresetSelector />
           <ThemeSelector />
 
-          {advancedUnlocked && <LayerOrder />}
+          {advancedUnlocked && (
+            <>
+              <LayerOrder />
+              <NoiseControl />
+            </>
+          )}
 
           <div>
             <label className="block text-xs uppercase tracking-widest text-white/40 mb-2">Background</label>
             <BackgroundToggle />
           </div>
-
-          <NoiseControl />
 
           <div>
             <label className="block text-xs uppercase tracking-widest text-white/40 mb-2">Logo Overlay</label>
@@ -112,26 +126,43 @@ export function LeftPanel() {
               Export SVG
             </button>
 
-            <div className="flex gap-1">
-              <button
-                onClick={handlePngExport}
-                className="flex-1 px-3 py-2 rounded-l text-sm bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
-              >
-                Export PNG
-              </button>
-              <div className="flex rounded-r overflow-hidden border-l border-white/10">
+            <div className="flex flex-col gap-1">
+              <div className="flex gap-1">
                 <button
-                  onClick={() => setPngScale(1)}
-                  className={`px-2.5 py-2 text-xs transition-colors ${pngScale === 1 ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                  onClick={handleRasterExport}
+                  className="flex-1 px-3 py-2 rounded-l text-sm bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
                 >
-                  1×
+                  Export {rasterFormat.toUpperCase()}
                 </button>
-                <button
-                  onClick={() => setPngScale(2)}
-                  className={`px-2.5 py-2 text-xs transition-colors border-l border-white/10 ${pngScale === 2 ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
-                >
-                  2×
-                </button>
+                <div className="flex rounded-r overflow-hidden border-l border-white/10">
+                  <button
+                    onClick={() => setRasterScale(1)}
+                    className={`px-2.5 py-2 text-xs transition-colors ${rasterScale === 1 ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                  >
+                    1×
+                  </button>
+                  <button
+                    onClick={() => setRasterScale(2)}
+                    className={`px-2.5 py-2 text-xs transition-colors border-l border-white/10 ${rasterScale === 2 ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                  >
+                    2×
+                  </button>
+                </div>
+              </div>
+              <div className="flex rounded overflow-hidden">
+                {(['png', 'webp', 'jpg'] as const).map((fmt) => (
+                  <button
+                    key={fmt}
+                    onClick={() => setRasterFormat(fmt)}
+                    className={`flex-1 px-2 py-1.5 text-xs transition-colors ${
+                      rasterFormat === fmt 
+                        ? 'bg-white/15 text-white' 
+                        : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+                    } ${fmt !== 'png' ? 'border-l border-white/10' : ''}`}
+                  >
+                    {fmt.toUpperCase()}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
