@@ -1,14 +1,253 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useStore } from '../../store/useStore'
 import { useCanvasFit } from '../../hooks/useCanvasFit'
 import { useCanvasResize } from '../../hooks/useCanvasResize'
 import { AtmosphereSvg } from './AtmosphereSvg'
 import { THEMES } from '../../constants/themes'
 import { PRESETS } from '../../constants/presets'
-import type { ThemeName } from '../../types'
+import { buildSvgString } from '../../lib/svgBuilder'
+import { exportSvg, exportPng, exportWebp, exportJpg } from '../../lib/exportPng'
+import type { ThemeName, CircleRole } from '../../types'
 
 const HANDLE_SIZE = 10
 const EDGE_SIZE = 6
+
+const FIGMA_NOISE_INSTRUCTIONS = `To match noise in Figma:
+1. Draw a rect over the full frame
+2. Fill → + → Noise (not solid)
+   Size: 200  Opacity: 8%
+3. Set layer blend mode to Soft Light
+4. Set layer opacity to 100%`
+
+type ExportFormat = 'png' | 'webp' | 'jpg'
+
+// --- Floating Panel Components ---
+
+function FloatingPanel({ 
+  title, 
+  isOpen, 
+  onToggle, 
+  position,
+  children 
+}: { 
+  title: string
+  isOpen: boolean
+  onToggle: () => void
+  position: 'left' | 'right'
+  children: React.ReactNode
+}) {
+  return (
+    <div className={`absolute top-4 ${position === 'left' ? 'left-4' : 'right-4'} z-20`}>
+      <button
+        onClick={onToggle}
+        className={`px-3 py-1.5 rounded-t-lg text-xs font-medium transition-colors ${
+          isOpen 
+            ? 'bg-neutral-800 text-white' 
+            : 'bg-neutral-800/80 text-white/60 hover:text-white hover:bg-neutral-800'
+        }`}
+      >
+        {title}
+      </button>
+      {isOpen && (
+        <div className="bg-neutral-800 rounded-b-lg rounded-tr-lg p-4 min-w-[200px] shadow-xl border border-white/10">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ExportPanel() {
+  const state = useStore()
+  const [rasterScale, setRasterScale] = useState<1 | 2>(2)
+  const [rasterFormat, setRasterFormat] = useState<ExportFormat>('png')
+  const [showNoisePopup, setShowNoisePopup] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const handleSvgExport = () => {
+    const svg = buildSvgString(state, true)
+    exportSvg(svg, `atmosphere-${state.theme}-${state.width}x${state.height}.svg`)
+    setShowNoisePopup(true)
+  }
+
+  const handleRasterExport = async () => {
+    const svg = buildSvgString(state, true)
+    const suffix = rasterScale === 2 ? '@2x' : ''
+    const filename = `atmosphere-${state.theme}-${state.width}x${state.height}${suffix}.${rasterFormat}`
+    
+    if (rasterFormat === 'png') {
+      await exportPng(svg, state.width, state.height, filename, rasterScale)
+    } else if (rasterFormat === 'webp') {
+      await exportWebp(svg, state.width, state.height, filename, rasterScale)
+    } else {
+      await exportJpg(svg, state.width, state.height, filename, rasterScale)
+    }
+    setShowNoisePopup(true)
+  }
+
+  const copyNoise = () => {
+    navigator.clipboard.writeText(FIGMA_NOISE_INSTRUCTIONS).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  return (
+    <>
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={handleSvgExport}
+          className="w-full px-3 py-2 rounded text-sm bg-white/10 text-white hover:bg-white/20 transition-colors font-medium"
+        >
+          Export SVG
+        </button>
+
+        <div className="flex flex-col gap-1">
+          <div className="flex gap-1">
+            <button
+              onClick={handleRasterExport}
+              className="flex-1 px-3 py-2 rounded-l text-sm bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
+            >
+              Export {rasterFormat.toUpperCase()}
+            </button>
+            <div className="flex rounded-r overflow-hidden border-l border-white/10">
+              <button
+                onClick={() => setRasterScale(1)}
+                className={`px-2 py-2 text-xs transition-colors ${rasterScale === 1 ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+              >
+                1×
+              </button>
+              <button
+                onClick={() => setRasterScale(2)}
+                className={`px-2 py-2 text-xs transition-colors border-l border-white/10 ${rasterScale === 2 ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+              >
+                2×
+              </button>
+            </div>
+          </div>
+          <div className="flex rounded overflow-hidden">
+            {(['png', 'webp', 'jpg'] as const).map((fmt) => (
+              <button
+                key={fmt}
+                onClick={() => setRasterFormat(fmt)}
+                className={`flex-1 px-2 py-1 text-xs transition-colors ${
+                  rasterFormat === fmt 
+                    ? 'bg-white/15 text-white' 
+                    : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+                } ${fmt !== 'png' ? 'border-l border-white/10' : ''}`}
+              >
+                {fmt.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {showNoisePopup && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          onClick={() => setShowNoisePopup(false)}
+        >
+          <div
+            className="bg-neutral-900 border border-white/15 rounded-xl p-6 shadow-2xl w-80"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <span className="text-sm font-medium text-white">Applying noise in Figma</span>
+              <button onClick={() => setShowNoisePopup(false)} className="text-white/40 hover:text-white leading-none ml-3">×</button>
+            </div>
+            <pre className="text-xs text-white/55 leading-relaxed whitespace-pre-wrap font-mono mb-4">{FIGMA_NOISE_INSTRUCTIONS}</pre>
+            <button onClick={copyNoise} className="text-xs text-white/40 hover:text-white/70 transition-colors">
+              {copied ? 'Copied' : 'Copy instructions'}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function DesignerPanel() {
+  const state = useStore()
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
+  const circles = state.circles
+  const setCircleColor = useStore((s) => s.setCircleColor)
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Logo Toggle */}
+      <div>
+        <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1.5">Logo</label>
+        <button
+          onClick={state.toggleLogo}
+          className={`w-full px-3 py-1.5 rounded text-xs transition-colors ${
+            state.showLogo
+              ? 'bg-white/20 text-white'
+              : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80'
+          }`}
+        >
+          {state.showLogo ? 'On' : 'Off'}
+        </button>
+      </div>
+
+      {/* Guides Toggle */}
+      <div>
+        <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1.5">Guides</label>
+        <button
+          onClick={state.toggleGuides}
+          className={`w-full px-3 py-1.5 rounded text-xs transition-colors ${
+            state.showGuides
+              ? 'bg-white/20 text-white'
+              : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80'
+          }`}
+        >
+          {state.showGuides ? 'On' : 'Off'}
+        </button>
+      </div>
+
+      {/* Advanced Color Settings */}
+      <div>
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="text-[10px] uppercase tracking-widest text-white/30 hover:text-white/50 transition-colors"
+        >
+          {showAdvanced ? '− Advanced colors' : '+ Advanced colors'}
+        </button>
+        
+        {showAdvanced && (
+          <div className="mt-3 flex flex-col gap-2">
+            {(['depth', 'main', 'highlight'] as CircleRole[]).map((role) => {
+              const circle = circles.find((c) => c.role === role)!
+              return (
+                <div key={role} className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={circle.color}
+                    onChange={(e) => setCircleColor(role, e.target.value)}
+                    className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent"
+                  />
+                  <span className="text-xs text-white/50 capitalize flex-1">{role}</span>
+                  <span className="text-[10px] text-white/30 font-mono">{circle.color}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Reset */}
+      <button
+        onClick={state.resetAll}
+        className="w-full px-3 py-1.5 rounded text-xs bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 transition-colors mt-2"
+      >
+        Reset all
+      </button>
+    </div>
+  )
+}
+
+// --- Bottom Bar Components ---
 
 function PresetDropdown() {
   const { width, height, setDimensions } = useStore()
@@ -58,7 +297,6 @@ function DimensionInput({ value, onChange, label }: { value: number; onChange: (
     }
   }
 
-  // Sync local value when external value changes (but not while focused)
   if (!isFocused && localValue !== String(value)) {
     setLocalValue(String(value))
   }
@@ -71,7 +309,7 @@ function DimensionInput({ value, onChange, label }: { value: number; onChange: (
       onFocus={() => setIsFocused(true)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="w-14 bg-transparent text-center text-xs text-white/60 font-mono 
+      className="w-12 bg-transparent text-center text-xs text-white/60 font-mono 
         border-b border-transparent hover:border-white/20 focus:border-white/40 
         focus:text-white focus:outline-none transition-colors"
       title={label}
@@ -90,7 +328,7 @@ function ThemeSwatch({ name }: { name: ThemeName }) {
   return (
     <button
       onClick={() => setTheme(name)}
-      className={`flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all ${
+      className={`flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all ${
         isActive 
           ? 'bg-white/10 ring-1 ring-white/30' 
           : 'hover:bg-white/5'
@@ -98,43 +336,34 @@ function ThemeSwatch({ name }: { name: ThemeName }) {
       title={name}
     >
       <div className="flex -space-x-1">
-        <div 
-          className="w-5 h-5 rounded-full border border-black/20" 
-          style={{ backgroundColor: theme.depth }} 
-        />
-        <div 
-          className="w-5 h-5 rounded-full border border-black/20" 
-          style={{ backgroundColor: theme.main }} 
-        />
-        <div 
-          className="w-5 h-5 rounded-full border border-black/20" 
-          style={{ backgroundColor: theme.highlight }} 
-        />
+        <div className="w-4 h-4 rounded-full border border-black/20" style={{ backgroundColor: theme.depth }} />
+        <div className="w-4 h-4 rounded-full border border-black/20" style={{ backgroundColor: theme.main }} />
+        <div className="w-4 h-4 rounded-full border border-black/20" style={{ backgroundColor: theme.highlight }} />
       </div>
-      <span className={`text-[10px] capitalize ${isActive ? 'text-white/70' : 'text-white/40'}`}>
-        {name}
-      </span>
+      <span className={`text-[9px] capitalize ${isActive ? 'text-white/70' : 'text-white/40'}`}>{name}</span>
     </button>
   )
 }
 
-function BackgroundToggleInline() {
+function BackgroundToggle() {
   const darkBackground = useStore((s) => s.darkBackground)
   const toggleBackground = useStore((s) => s.toggleBackground)
 
   return (
     <button
       onClick={toggleBackground}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+      className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors"
     >
       <div
-        className="w-4 h-4 rounded-full border border-white/20"
+        className="w-3 h-3 rounded-full border border-white/20"
         style={{ backgroundColor: darkBackground ? '#000000' : '#ffffff' }}
       />
-      <span className="text-xs text-white/50">{darkBackground ? 'Dark' : 'Light'}</span>
+      <span className="text-[10px] text-white/50">{darkBackground ? 'Dark' : 'Light'}</span>
     </button>
   )
 }
+
+// --- Resize Handles ---
 
 function ResizeHandle({ 
   position, 
@@ -147,14 +376,8 @@ function ResizeHandle({
   const size = isCorner ? HANDLE_SIZE : EDGE_SIZE
 
   const cursorMap: Record<string, string> = {
-    n: 'ns-resize',
-    s: 'ns-resize',
-    e: 'ew-resize',
-    w: 'ew-resize',
-    ne: 'nesw-resize',
-    sw: 'nesw-resize',
-    nw: 'nwse-resize',
-    se: 'nwse-resize',
+    n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize',
+    ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize',
   }
 
   const positionStyles: Record<string, React.CSSProperties> = {
@@ -172,64 +395,83 @@ function ResizeHandle({
     <div
       onMouseDown={onMouseDown}
       className={`absolute ${isCorner ? 'bg-white/60 rounded-sm hover:bg-white' : 'bg-transparent hover:bg-white/30'} transition-colors`}
-      style={{
-        ...positionStyles[position],
-        cursor: cursorMap[position],
-      }}
+      style={{ ...positionStyles[position], cursor: cursorMap[position] }}
     />
   )
 }
+
+// --- Main Preview Area ---
 
 export function PreviewArea() {
   const { width, height } = useStore()
   const setDimensions = useStore((s) => s.setDimensions)
   const { containerRef, scale, displayWidth, displayHeight } = useCanvasFit(width, height)
   const { handleMouseDown } = useCanvasResize(scale)
+  
+  const [exportOpen, setExportOpen] = useState(false)
+  const [designerOpen, setDesignerOpen] = useState(false)
 
   return (
-    <div ref={containerRef} className="flex-1 flex flex-col items-center justify-center min-h-0 p-8">
-      {/* Dimensions and preset above canvas */}
-      <div className="mb-3 flex items-center gap-3 text-white/40">
-        <PresetDropdown />
-        <div className="flex items-center gap-1">
-          <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
-          <span className="text-xs">×</span>
-          <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
+    <div ref={containerRef} className="flex-1 relative flex flex-col min-h-0 bg-neutral-950">
+      {/* Floating panels */}
+      <FloatingPanel title="Export" isOpen={exportOpen} onToggle={() => setExportOpen(!exportOpen)} position="right">
+        <ExportPanel />
+      </FloatingPanel>
+      
+      <FloatingPanel title="Designer" isOpen={designerOpen} onToggle={() => setDesignerOpen(!designerOpen)} position="left">
+        <DesignerPanel />
+      </FloatingPanel>
+
+      {/* Canvas area - fills available space and centers content */}
+      <div className="flex-1 flex items-center justify-center p-8 min-h-0">
+        <div
+          className="relative group"
+          style={{
+            width: displayWidth,
+            height: displayHeight,
+            flexShrink: 0,
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 40px rgba(0,0,0,0.7)',
+          }}
+        >
+          <AtmosphereSvg scale={scale} displayWidth={displayWidth} displayHeight={displayHeight} />
+          
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <ResizeHandle position="n" onMouseDown={handleMouseDown('n')} />
+            <ResizeHandle position="s" onMouseDown={handleMouseDown('s')} />
+            <ResizeHandle position="e" onMouseDown={handleMouseDown('e')} />
+            <ResizeHandle position="w" onMouseDown={handleMouseDown('w')} />
+            <ResizeHandle position="ne" onMouseDown={handleMouseDown('ne')} />
+            <ResizeHandle position="nw" onMouseDown={handleMouseDown('nw')} />
+            <ResizeHandle position="se" onMouseDown={handleMouseDown('se')} />
+            <ResizeHandle position="sw" onMouseDown={handleMouseDown('sw')} />
+          </div>
         </div>
-        <span className="text-xs font-mono text-white/30">{Math.round(scale * 100)}%</span>
       </div>
 
-      <div
-        className="relative group"
-        style={{
-          width: displayWidth,
-          height: displayHeight,
-          flexShrink: 0,
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 40px rgba(0,0,0,0.7)',
-        }}
-      >
-        <AtmosphereSvg scale={scale} displayWidth={displayWidth} displayHeight={displayHeight} />
-        
-        {/* Resize handles - visible on hover */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-          <ResizeHandle position="n" onMouseDown={handleMouseDown('n')} />
-          <ResizeHandle position="s" onMouseDown={handleMouseDown('s')} />
-          <ResizeHandle position="e" onMouseDown={handleMouseDown('e')} />
-          <ResizeHandle position="w" onMouseDown={handleMouseDown('w')} />
-          <ResizeHandle position="ne" onMouseDown={handleMouseDown('ne')} />
-          <ResizeHandle position="nw" onMouseDown={handleMouseDown('nw')} />
-          <ResizeHandle position="se" onMouseDown={handleMouseDown('se')} />
-          <ResizeHandle position="sw" onMouseDown={handleMouseDown('sw')} />
+      {/* Bottom bar with specs, themes, background toggle */}
+      <div className="flex-shrink-0 border-t border-white/5 bg-neutral-900/50 px-6 py-3">
+        <div className="flex items-center justify-between">
+          {/* Left: Specs */}
+          <div className="flex items-center gap-3">
+            <PresetDropdown />
+            <div className="flex items-center gap-1 text-white/40">
+              <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
+              <span className="text-xs">×</span>
+              <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
+            </div>
+            <span className="text-xs font-mono text-white/25">{Math.round(scale * 100)}%</span>
+          </div>
+
+          {/* Center: Themes */}
+          <div className="flex items-center gap-1">
+            {THEME_NAMES.map((name) => (
+              <ThemeSwatch key={name} name={name} />
+            ))}
+          </div>
+
+          {/* Right: Background toggle */}
+          <BackgroundToggle />
         </div>
-      </div>
-      {/* Controls below canvas */}
-      <div className="mt-4 flex flex-col items-center gap-3">
-        <div className="flex items-center gap-1">
-          {THEME_NAMES.map((name) => (
-            <ThemeSwatch key={name} name={name} />
-          ))}
-        </div>
-        <BackgroundToggleInline />
       </div>
     </div>
   )

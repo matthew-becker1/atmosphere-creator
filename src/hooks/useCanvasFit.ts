@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react'
 
 function computeScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number) {
-  const padding = 64
-  const scaleX = (containerWidth - padding) / canvasWidth
-  const scaleY = (containerHeight - padding) / canvasHeight
+  const paddingX = 80  // horizontal padding
+  const paddingY = 120 // vertical padding (accounts for floating panels and bottom bar)
+  const scaleX = (containerWidth - paddingX) / canvasWidth
+  const scaleY = (containerHeight - paddingY) / canvasHeight
   return Math.min(scaleX, scaleY, 1)
 }
 
