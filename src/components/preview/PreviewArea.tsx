@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { useCanvasFit } from '../../hooks/useCanvasFit'
 import { useCanvasResize } from '../../hooks/useCanvasResize'
@@ -7,7 +7,7 @@ import { THEMES } from '../../constants/themes'
 import { PRESETS } from '../../constants/presets'
 import { buildSvgString } from '../../lib/svgBuilder'
 import { exportSvg, exportPng, exportWebp, exportJpg } from '../../lib/exportPng'
-import type { ThemeName, CircleRole } from '../../types'
+import type { ThemeName } from '../../types'
 
 const HANDLE_SIZE = 16
 const EDGE_SIZE = 8
@@ -167,87 +167,7 @@ function ExportPanel() {
   )
 }
 
-function DesignerPanel() {
-  const state = useStore()
-  const [showAdvanced, setShowAdvanced] = useState(false)
-
-  const circles = state.circles
-  const setCircleColor = useStore((s) => s.setCircleColor)
-
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Logo Toggle */}
-      <div>
-        <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1.5">Logo</label>
-        <button
-          onClick={state.toggleLogo}
-          className={`w-full px-3 py-1.5 rounded text-xs transition-colors ${
-            state.showLogo
-              ? 'bg-white/20 text-white'
-              : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80'
-          }`}
-        >
-          {state.showLogo ? 'On' : 'Off'}
-        </button>
-      </div>
-
-      {/* Guides Toggle */}
-      <div>
-        <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-1.5">Guides</label>
-        <button
-          onClick={state.toggleGuides}
-          className={`w-full px-3 py-1.5 rounded text-xs transition-colors ${
-            state.showGuides
-              ? 'bg-white/20 text-white'
-              : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80'
-          }`}
-        >
-          {state.showGuides ? 'On' : 'Off'}
-        </button>
-      </div>
-
-      {/* Advanced Color Settings */}
-      <div>
-        <button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="text-[10px] uppercase tracking-widest text-white/30 hover:text-white/50 transition-colors"
-        >
-          {showAdvanced ? '− Advanced colors' : '+ Advanced colors'}
-        </button>
-        
-        {showAdvanced && (
-          <div className="mt-3 flex flex-col gap-2">
-            {(['depth', 'main', 'highlight'] as CircleRole[]).map((role) => {
-              const circle = circles.find((c) => c.role === role)!
-              return (
-                <div key={role} className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={circle.color}
-                    onChange={(e) => setCircleColor(role, e.target.value)}
-                    className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent"
-                  />
-                  <span className="text-xs text-white/50 capitalize flex-1">{role}</span>
-                  <span className="text-[10px] text-white/30 font-mono">{circle.color}</span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Reset */}
-      <button
-        onClick={state.resetAll}
-        className="w-full px-3 py-1.5 rounded text-xs bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 transition-colors mt-2"
-      >
-        Reset all
-      </button>
-    </div>
-  )
-}
-
-// --- Bottom Bar Components ---
+// --- Input Components ---
 
 function PresetDropdown() {
   const { width, height, setDimensions } = useStore()
@@ -509,22 +429,21 @@ export function PreviewArea() {
   const { handleMouseDown } = useCanvasResize(scale)
   
   const [exportOpen, setExportOpen] = useState(false)
-  const [designerOpen, setDesignerOpen] = useState(false)
 
   return (
     <div className="flex-1 relative flex flex-col min-h-0 bg-neutral-950">
-      {/* Floating panels */}
+      {/* Export floating panel */}
       <FloatingPanel title="Export" isOpen={exportOpen} onToggle={() => setExportOpen(!exportOpen)} position="right">
         <ExportPanel />
       </FloatingPanel>
-      
-      <FloatingPanel title="Designer" isOpen={designerOpen} onToggle={() => setDesignerOpen(!designerOpen)} position="left">
-        <DesignerPanel />
-      </FloatingPanel>
 
-      {/* Top bar with dimensions */}
-      <div className="flex-shrink-0 flex justify-center py-3">
-        <div className="flex items-center gap-3">
+      {/* Canvas area with side controls */}
+      <div ref={containerRef} className="flex-1 flex items-center justify-center px-4 min-h-0 overflow-hidden">
+        {/* Left side: Logo toggle */}
+        <LogoToggle />
+
+        {/* Left of canvas: Dimensions */}
+        <div className="mr-4 flex flex-col items-end gap-1">
           <PresetDropdown />
           <div className="flex items-center gap-1 text-white/40">
             <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
@@ -533,12 +452,6 @@ export function PreviewArea() {
           </div>
           <ZoomInput scale={scale} setScale={setScale} resetToFit={resetToFit} isManualScale={isManualScale} />
         </div>
-      </div>
-
-      {/* Canvas area with side toggles */}
-      <div ref={containerRef} className="flex-1 flex items-center justify-center px-8 min-h-0 overflow-hidden">
-        {/* Logo toggle - left side */}
-        <LogoToggle />
 
         <div
           className="relative group"
@@ -565,20 +478,18 @@ export function PreviewArea() {
           </div>
         </div>
 
-        {/* Guides toggle - right side */}
-        <GuidesToggle />
-      </div>
-
-      {/* Bottom bar with themes and background toggle */}
-      <div className="flex-shrink-0 flex justify-center py-4">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1">
+        {/* Right of canvas: Themes */}
+        <div className="ml-4 flex flex-col items-start gap-2">
+          <div className="flex flex-col gap-1">
             {THEME_NAMES.map((name) => (
               <ThemeSwatch key={name} name={name} />
             ))}
           </div>
           <BackgroundToggle />
         </div>
+
+        {/* Guides toggle - right side */}
+        <GuidesToggle />
       </div>
     </div>
   )
