@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { PresetSelector } from '../controls/PresetSelector'
-import { ThemeSelector } from '../controls/ThemeSelector'
 import { GuideToggle } from '../controls/GuideToggle'
 import { LayerOrder } from '../controls/LayerOrder'
 import { NoiseControl } from '../controls/NoiseControl'
@@ -80,7 +79,6 @@ export function LeftPanel() {
           </div>
 
           <PresetSelector />
-          <ThemeSelector />
 
           {advancedUnlocked && (
             <>

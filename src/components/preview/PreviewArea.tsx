@@ -1,41 +1,49 @@
-import { useRef } from 'react'
 import { useStore } from '../../store/useStore'
 import { useCanvasFit } from '../../hooks/useCanvasFit'
 import { useCanvasResize } from '../../hooks/useCanvasResize'
 import { AtmosphereSvg } from './AtmosphereSvg'
-import type { CircleRole } from '../../types'
+import { THEMES } from '../../constants/themes'
+import type { ThemeName } from '../../types'
 
 const HANDLE_SIZE = 10
 const EDGE_SIZE = 6
 
-const ROLE_LABELS: Record<CircleRole, string> = {
-  depth: 'Depth',
-  main: 'Main', 
-  highlight: 'Highlight',
-}
+const THEME_NAMES: ThemeName[] = ['twilight', 'dawn', 'morning', 'day']
 
-function ColorPicker({ role }: { role: CircleRole }) {
-  const circle = useStore((s) => s.circles.find((c) => c.role === role)!)
-  const setCircleColor = useStore((s) => s.setCircleColor)
-  const inputRef = useRef<HTMLInputElement>(null)
+function ThemeSwatch({ name }: { name: ThemeName }) {
+  const currentTheme = useStore((s) => s.theme)
+  const setTheme = useStore((s) => s.setTheme)
+  const theme = THEMES[name]
+  const isActive = currentTheme === name
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <button
-        onClick={() => inputRef.current?.click()}
-        className="w-8 h-8 rounded-full border-2 border-white/20 hover:border-white/40 transition-colors cursor-pointer"
-        style={{ backgroundColor: circle.color }}
-        title={`${ROLE_LABELS[role]}: ${circle.color}`}
-      />
-      <input
-        ref={inputRef}
-        type="color"
-        value={circle.color}
-        onChange={(e) => setCircleColor(role, e.target.value)}
-        className="sr-only"
-      />
-      <span className="text-[10px] text-white/40 uppercase tracking-wide">{ROLE_LABELS[role]}</span>
-    </div>
+    <button
+      onClick={() => setTheme(name)}
+      className={`flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all ${
+        isActive 
+          ? 'bg-white/10 ring-1 ring-white/30' 
+          : 'hover:bg-white/5'
+      }`}
+      title={name}
+    >
+      <div className="flex -space-x-1">
+        <div 
+          className="w-5 h-5 rounded-full border border-black/20" 
+          style={{ backgroundColor: theme.depth }} 
+        />
+        <div 
+          className="w-5 h-5 rounded-full border border-black/20" 
+          style={{ backgroundColor: theme.main }} 
+        />
+        <div 
+          className="w-5 h-5 rounded-full border border-black/20" 
+          style={{ backgroundColor: theme.highlight }} 
+        />
+      </div>
+      <span className={`text-[10px] capitalize ${isActive ? 'text-white/70' : 'text-white/40'}`}>
+        {name}
+      </span>
+    </button>
   )
 }
 
@@ -133,10 +141,10 @@ export function PreviewArea() {
       </div>
       {/* Controls below canvas */}
       <div className="mt-4 flex flex-col items-center gap-3">
-        <div className="flex items-center gap-4">
-          <ColorPicker role="depth" />
-          <ColorPicker role="main" />
-          <ColorPicker role="highlight" />
+        <div className="flex items-center gap-1">
+          {THEME_NAMES.map((name) => (
+            <ThemeSwatch key={name} name={name} />
+          ))}
         </div>
         <BackgroundToggleInline />
         <p className="text-xs text-white/25">
