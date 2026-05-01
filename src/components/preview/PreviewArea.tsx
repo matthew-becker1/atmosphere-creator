@@ -437,13 +437,9 @@ export function PreviewArea() {
         <ExportPanel />
       </FloatingPanel>
 
-      {/* Canvas area with side controls */}
-      <div ref={containerRef} className="flex-1 flex items-center justify-center px-4 min-h-0 overflow-hidden">
-        {/* Left side: Logo toggle */}
-        <LogoToggle />
-
-        {/* Left of canvas: Dimensions */}
-        <div className="mr-4 flex flex-col items-end gap-1">
+      {/* Top bar: Dimensions */}
+      <div className="flex-shrink-0 flex justify-center py-3">
+        <div className="flex items-center gap-3">
           <PresetDropdown />
           <div className="flex items-center gap-1 text-white/40">
             <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
@@ -452,6 +448,12 @@ export function PreviewArea() {
           </div>
           <ZoomInput scale={scale} setScale={setScale} resetToFit={resetToFit} isManualScale={isManualScale} />
         </div>
+      </div>
+
+      {/* Canvas area with side toggles */}
+      <div ref={containerRef} className="flex-1 flex items-center justify-center px-4 min-h-0 overflow-hidden">
+        {/* Logo toggle - left */}
+        <LogoToggle />
 
         <div
           className="relative group"
@@ -478,18 +480,20 @@ export function PreviewArea() {
           </div>
         </div>
 
-        {/* Right of canvas: Themes */}
-        <div className="ml-4 flex flex-col items-start gap-2">
-          <div className="flex flex-col gap-1">
+        {/* Guides toggle - right */}
+        <GuidesToggle />
+      </div>
+
+      {/* Bottom bar: Themes */}
+      <div className="flex-shrink-0 flex justify-center py-3">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
             {THEME_NAMES.map((name) => (
               <ThemeSwatch key={name} name={name} />
             ))}
           </div>
           <BackgroundToggle />
         </div>
-
-        {/* Guides toggle - right side */}
-        <GuidesToggle />
       </div>
     </div>
   )
