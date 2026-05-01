@@ -461,7 +461,7 @@ function ResizeHandle({
 // --- Main Preview Area ---
 
 export function PreviewArea() {
-  const { width, height } = useStore()
+  const { width, height, isResizing } = useStore()
   const setDimensions = useStore((s) => s.setDimensions)
   const { containerRef, scale, setScale, resetToFit, isManualScale, displayWidth, displayHeight } = useCanvasFit(width, height)
   const { handleMouseDown } = useCanvasResize(scale)
@@ -506,7 +506,7 @@ export function PreviewArea() {
         >
           <AtmosphereSvg scale={scale} displayWidth={displayWidth} displayHeight={displayHeight} />
           
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className={`transition-opacity ${isResizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
             {/* Edge handles first (lower z-index) */}
             <ResizeHandle position="n" onMouseDown={handleMouseDown('n')} />
             <ResizeHandle position="s" onMouseDown={handleMouseDown('s')} />
