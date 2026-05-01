@@ -27,6 +27,7 @@ interface Store extends AppState {
   setTheme: (theme: ThemeName) => void
   setDimensions: (w: number, h: number) => void
   setCirclePosition: (role: CircleRole, x: number, y: number) => void
+  setCircleColor: (role: CircleRole, color: string) => void
   setNoiseIntensity: (value: number) => void
   setNoiseScale: (value: number) => void
   moveLayer: (role: CircleRole, direction: 'up' | 'down') => void
@@ -78,6 +79,14 @@ export const useStore = create<Store>((set, get) => ({
       const clamped = clampToTolerance(x, y, bounds)
       const updated = [...s.circles] as AppState['circles']
       updated[idx] = { ...circle, x: clamped.x, y: clamped.y }
+      return { circles: updated }
+    }),
+
+  setCircleColor: (role, color) =>
+    set((s) => {
+      const idx = s.circles.findIndex((c) => c.role === role)
+      const updated = [...s.circles] as AppState['circles']
+      updated[idx] = { ...s.circles[idx], color }
       return { circles: updated }
     }),
 

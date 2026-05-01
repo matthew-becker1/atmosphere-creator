@@ -3,7 +3,6 @@ import { useStore } from '../../store/useStore'
 import { PresetSelector } from '../controls/PresetSelector'
 import { ThemeSelector } from '../controls/ThemeSelector'
 import { GuideToggle } from '../controls/GuideToggle'
-import { BackgroundToggle } from '../controls/BackgroundToggle'
 import { LayerOrder } from '../controls/LayerOrder'
 import { NoiseControl } from '../controls/NoiseControl'
 import { SpecsPanel } from './SpecsPanel'
@@ -89,11 +88,6 @@ export function LeftPanel() {
               <NoiseControl />
             </>
           )}
-
-          <div>
-            <label className="block text-xs uppercase tracking-widest text-white/40 mb-2">Background</label>
-            <BackgroundToggle />
-          </div>
 
           <div>
             <label className="block text-xs uppercase tracking-widest text-white/40 mb-2">Logo Overlay</label>

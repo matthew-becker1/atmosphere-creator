@@ -1,10 +1,61 @@
+import { useRef } from 'react'
 import { useStore } from '../../store/useStore'
 import { useCanvasFit } from '../../hooks/useCanvasFit'
 import { useCanvasResize } from '../../hooks/useCanvasResize'
 import { AtmosphereSvg } from './AtmosphereSvg'
+import type { CircleRole } from '../../types'
 
 const HANDLE_SIZE = 10
 const EDGE_SIZE = 6
+
+const ROLE_LABELS: Record<CircleRole, string> = {
+  depth: 'Depth',
+  main: 'Main', 
+  highlight: 'Highlight',
+}
+
+function ColorPicker({ role }: { role: CircleRole }) {
+  const circle = useStore((s) => s.circles.find((c) => c.role === role)!)
+  const setCircleColor = useStore((s) => s.setCircleColor)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button
+        onClick={() => inputRef.current?.click()}
+        className="w-8 h-8 rounded-full border-2 border-white/20 hover:border-white/40 transition-colors cursor-pointer"
+        style={{ backgroundColor: circle.color }}
+        title={`${ROLE_LABELS[role]}: ${circle.color}`}
+      />
+      <input
+        ref={inputRef}
+        type="color"
+        value={circle.color}
+        onChange={(e) => setCircleColor(role, e.target.value)}
+        className="sr-only"
+      />
+      <span className="text-[10px] text-white/40 uppercase tracking-wide">{ROLE_LABELS[role]}</span>
+    </div>
+  )
+}
+
+function BackgroundToggleInline() {
+  const darkBackground = useStore((s) => s.darkBackground)
+  const toggleBackground = useStore((s) => s.toggleBackground)
+
+  return (
+    <button
+      onClick={toggleBackground}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+    >
+      <div
+        className="w-4 h-4 rounded-full border border-white/20"
+        style={{ backgroundColor: darkBackground ? '#000000' : '#ffffff' }}
+      />
+      <span className="text-xs text-white/50">{darkBackground ? 'Dark' : 'Light'}</span>
+    </button>
+  )
+}
 
 function ResizeHandle({ 
   position, 
@@ -80,9 +131,18 @@ export function PreviewArea() {
           <ResizeHandle position="sw" onMouseDown={handleMouseDown('sw')} />
         </div>
       </div>
-      <p className="mt-3 text-xs text-white/25">
-        {width} × {height} &nbsp;·&nbsp; {Math.round(scale * 100)}%
-      </p>
+      {/* Controls below canvas */}
+      <div className="mt-4 flex flex-col items-center gap-3">
+        <div className="flex items-center gap-4">
+          <ColorPicker role="depth" />
+          <ColorPicker role="main" />
+          <ColorPicker role="highlight" />
+        </div>
+        <BackgroundToggleInline />
+        <p className="text-xs text-white/25">
+          {width} × {height} &nbsp;·&nbsp; {Math.round(scale * 100)}%
+        </p>
+      </div>
     </div>
   )
 }
