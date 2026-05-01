@@ -9,8 +9,8 @@ import { buildSvgString } from '../../lib/svgBuilder'
 import { exportSvg, exportPng, exportWebp, exportJpg } from '../../lib/exportPng'
 import type { ThemeName, CircleRole } from '../../types'
 
-const HANDLE_SIZE = 10
-const EDGE_SIZE = 6
+const HANDLE_SIZE = 16
+const EDGE_SIZE = 8
 
 const FIGMA_NOISE_INSTRUCTIONS = `To match noise in Figma:
 1. Draw a rect over the full frame
@@ -452,7 +452,7 @@ function ResizeHandle({
   return (
     <div
       onMouseDown={onMouseDown}
-      className={`absolute ${isCorner ? 'bg-white/60 rounded-sm hover:bg-white' : 'bg-transparent hover:bg-white/30'} transition-colors`}
+      className={`absolute ${isCorner ? 'bg-white/50 rounded hover:bg-white' : 'bg-transparent hover:bg-white/20'} transition-colors z-10`}
       style={{ ...positionStyles[position], cursor: cursorMap[position] }}
     />
   )
