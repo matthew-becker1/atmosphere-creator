@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react'
 
 function computeScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number) {
   const paddingX = 80  // horizontal padding
-  const paddingY = 120 // vertical padding (accounts for floating panels and bottom bar)
+  const paddingY = 160 // vertical padding (accounts for top bar, bottom bar, and margins)
   const scaleX = (containerWidth - paddingX) / canvasWidth
   const scaleY = (containerHeight - paddingY) / canvasHeight
-  return Math.min(scaleX, scaleY, 1)
+  // No cap - always fit to available space
+  return Math.min(scaleX, scaleY)
 }
 
 export function useCanvasFit(width: number, height: number) {
