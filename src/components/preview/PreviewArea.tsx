@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useStore } from '../../store/useStore'
 import { useCanvasFit } from '../../hooks/useCanvasFit'
 import { useCanvasResize } from '../../hooks/useCanvasResize'
@@ -7,6 +8,47 @@ import type { ThemeName } from '../../types'
 
 const HANDLE_SIZE = 10
 const EDGE_SIZE = 6
+
+function DimensionInput({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+  const [localValue, setLocalValue] = useState(String(value))
+  const [isFocused, setIsFocused] = useState(false)
+
+  const handleBlur = () => {
+    setIsFocused(false)
+    const num = parseInt(localValue, 10)
+    if (!isNaN(num) && num >= 200 && num <= 4000) {
+      onChange(num)
+    } else {
+      setLocalValue(String(value))
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur()
+    }
+  }
+
+  // Sync local value when external value changes (but not while focused)
+  if (!isFocused && localValue !== String(value)) {
+    setLocalValue(String(value))
+  }
+
+  return (
+    <input
+      type="text"
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className="w-14 bg-transparent text-center text-xs text-white/60 font-mono 
+        border-b border-transparent hover:border-white/20 focus:border-white/40 
+        focus:text-white focus:outline-none transition-colors"
+      title={label}
+    />
+  )
+}
 
 const THEME_NAMES: ThemeName[] = ['twilight', 'dawn', 'morning', 'day']
 
@@ -111,11 +153,21 @@ function ResizeHandle({
 
 export function PreviewArea() {
   const { width, height } = useStore()
+  const setDimensions = useStore((s) => s.setDimensions)
   const { containerRef, scale, displayWidth, displayHeight } = useCanvasFit(width, height)
   const { handleMouseDown } = useCanvasResize(scale)
 
   return (
     <div ref={containerRef} className="flex-1 flex flex-col items-center justify-center min-h-0 p-8">
+      {/* Dimensions above canvas */}
+      <div className="mb-3 flex items-center gap-1 text-white/40">
+        <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
+        <span className="text-xs">×</span>
+        <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
+        <span className="text-xs ml-2">·</span>
+        <span className="text-xs ml-2 font-mono">{Math.round(scale * 100)}%</span>
+      </div>
+
       <div
         className="relative group"
         style={{
@@ -147,9 +199,6 @@ export function PreviewArea() {
           ))}
         </div>
         <BackgroundToggleInline />
-        <p className="text-xs text-white/25">
-          {width} × {height} &nbsp;·&nbsp; {Math.round(scale * 100)}%
-        </p>
       </div>
     </div>
   )
