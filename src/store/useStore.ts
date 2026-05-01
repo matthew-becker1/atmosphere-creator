@@ -24,6 +24,7 @@ function makeCircles(theme: ThemeName, w: number, h: number): AppState['circles'
 }
 
 interface Store extends AppState {
+  isResizing: boolean
   setTheme: (theme: ThemeName) => void
   setDimensions: (w: number, h: number) => void
   setCirclePosition: (role: CircleRole, x: number, y: number) => void
@@ -37,6 +38,7 @@ interface Store extends AppState {
   setDraggingRole: (role: CircleRole | null) => void
   toggleBackground: () => void
   toggleLogo: () => void
+  setIsResizing: (value: boolean) => void
 }
 
 const DEFAULT_WIDTH = 1080
@@ -54,6 +56,7 @@ export const useStore = create<Store>((set, get) => ({
   noiseScale: 1,
   layerOrder: DEFAULT_LAYER_ORDER,
   circles: makeCircles('day', DEFAULT_WIDTH, DEFAULT_HEIGHT),
+  isResizing: false,
 
   setTheme: (theme) =>
     set((s) => ({
@@ -128,4 +131,5 @@ export const useStore = create<Store>((set, get) => ({
   setDraggingRole: (role) => set({ draggingRole: role }),
   toggleBackground: () => set((s) => ({ darkBackground: !s.darkBackground })),
   toggleLogo: () => set((s) => ({ showLogo: !s.showLogo })),
+  setIsResizing: (value) => set({ isResizing: value }),
 }))

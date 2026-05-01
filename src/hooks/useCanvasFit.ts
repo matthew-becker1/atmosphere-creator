@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
+import { useStore } from '../store/useStore'
 
 function computeFitScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number) {
   const paddingX = 100
@@ -16,6 +17,7 @@ export function useCanvasFit(width: number, height: number) {
   const [fitScale, setFitScale] = useState(0.5)
   const [manualScale, setManualScale] = useState<number | null>(null)
   const lastContainerSize = useRef({ w: 0, h: 0 })
+  const isResizing = useStore((s) => s.isResizing)
 
   const scale = manualScale ?? fitScale
 
@@ -37,12 +39,14 @@ export function useCanvasFit(width: number, height: number) {
   }, [computeAndSetFit])
 
   // Recalculate when canvas dimensions change (use last known container size)
+  // Skip during resize - will recalculate when resize ends
   useEffect(() => {
+    if (isResizing) return
     const { w, h } = lastContainerSize.current
     if (w > 0 && h > 0) {
       computeAndSetFit(w, h)
     }
-  }, [width, height, computeAndSetFit])
+  }, [width, height, isResizing, computeAndSetFit])
 
   // Watch for container resize
   useEffect(() => {

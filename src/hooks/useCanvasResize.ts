@@ -8,6 +8,7 @@ const MAX_SIZE = 4000
 
 export function useCanvasResize(scale: number) {
   const setDimensions = useStore((s) => s.setDimensions)
+  const setIsResizing = useStore((s) => s.setIsResizing)
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
   const dragRef = useRef<{ startX: number; startY: number; startW: number; startH: number; dir: ResizeDirection } | null>(null)
@@ -17,6 +18,7 @@ export function useCanvasResize(scale: number) {
       e.preventDefault()
       e.stopPropagation()
       
+      setIsResizing(true)
       dragRef.current = {
         startX: e.clientX,
         startY: e.clientY,
@@ -54,6 +56,7 @@ export function useCanvasResize(scale: number) {
 
       const handleMouseUp = () => {
         dragRef.current = null
+        setIsResizing(false)
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
       }
@@ -61,7 +64,7 @@ export function useCanvasResize(scale: number) {
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     },
-    [scale, width, height, setDimensions]
+    [scale, width, height, setDimensions, setIsResizing]
   )
 
   return { handleMouseDown }
