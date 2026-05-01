@@ -452,7 +452,7 @@ function ResizeHandle({
   return (
     <div
       onMouseDown={onMouseDown}
-      className={`absolute ${isCorner ? 'bg-white/50 rounded hover:bg-white' : 'bg-transparent hover:bg-white/20'} transition-colors z-10`}
+      className={`absolute ${isCorner ? 'bg-white/50 rounded hover:bg-white z-20' : 'bg-transparent hover:bg-white/20 z-10'} transition-colors`}
       style={{ ...positionStyles[position], cursor: cursorMap[position] }}
     />
   )
@@ -507,10 +507,12 @@ export function PreviewArea() {
           <AtmosphereSvg scale={scale} displayWidth={displayWidth} displayHeight={displayHeight} />
           
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Edge handles first (lower z-index) */}
             <ResizeHandle position="n" onMouseDown={handleMouseDown('n')} />
             <ResizeHandle position="s" onMouseDown={handleMouseDown('s')} />
             <ResizeHandle position="e" onMouseDown={handleMouseDown('e')} />
             <ResizeHandle position="w" onMouseDown={handleMouseDown('w')} />
+            {/* Corner handles last (higher z-index, rendered on top) */}
             <ResizeHandle position="ne" onMouseDown={handleMouseDown('ne')} />
             <ResizeHandle position="nw" onMouseDown={handleMouseDown('nw')} />
             <ResizeHandle position="se" onMouseDown={handleMouseDown('se')} />
