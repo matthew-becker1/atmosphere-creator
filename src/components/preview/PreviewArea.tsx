@@ -437,63 +437,63 @@ export function PreviewArea() {
         <ExportPanel />
       </FloatingPanel>
 
-      {/* Top bar: Dimensions */}
-      <div className="flex-shrink-0 flex justify-center py-3">
-        <div className="flex items-center gap-3">
-          <PresetDropdown />
-          <div className="flex items-center gap-1 text-white/40">
-            <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
-            <span className="text-xs">×</span>
-            <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
-          </div>
-          <ZoomInput scale={scale} setScale={setScale} resetToFit={resetToFit} isManualScale={isManualScale} />
-        </div>
-      </div>
-
-      {/* Canvas area with side toggles */}
+      {/* Canvas area with all controls around it */}
       <div ref={containerRef} className="flex-1 flex items-center justify-center px-4 min-h-0 overflow-hidden">
         {/* Logo toggle - left */}
         <LogoToggle />
 
-        <div
-          className="relative group"
-          style={{
-            width: displayWidth,
-            height: displayHeight,
-            flexShrink: 0,
-            boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 40px rgba(0,0,0,0.7)',
-          }}
-        >
-          <AtmosphereSvg scale={scale} displayWidth={displayWidth} displayHeight={displayHeight} />
-          
-          <div className={`transition-opacity ${isResizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-            {/* Edge handles first (lower z-index) */}
-            <ResizeHandle position="n" onMouseDown={handleMouseDown('n')} />
-            <ResizeHandle position="s" onMouseDown={handleMouseDown('s')} />
-            <ResizeHandle position="e" onMouseDown={handleMouseDown('e')} />
-            <ResizeHandle position="w" onMouseDown={handleMouseDown('w')} />
-            {/* Corner handles last (higher z-index, rendered on top) */}
-            <ResizeHandle position="ne" onMouseDown={handleMouseDown('ne')} />
-            <ResizeHandle position="nw" onMouseDown={handleMouseDown('nw')} />
-            <ResizeHandle position="se" onMouseDown={handleMouseDown('se')} />
-            <ResizeHandle position="sw" onMouseDown={handleMouseDown('sw')} />
+        {/* Center column: dimensions above, canvas, themes below */}
+        <div className="flex flex-col items-center">
+          {/* Dimensions - above canvas */}
+          <div className="mb-3 flex items-center gap-3">
+            <PresetDropdown />
+            <div className="flex items-center gap-1 text-white/40">
+              <DimensionInput value={width} onChange={(w) => setDimensions(w, height)} label="Width" />
+              <span className="text-xs">×</span>
+              <DimensionInput value={height} onChange={(h) => setDimensions(width, h)} label="Height" />
+            </div>
+            <ZoomInput scale={scale} setScale={setScale} resetToFit={resetToFit} isManualScale={isManualScale} />
+          </div>
+
+          {/* Canvas */}
+          <div
+            className="relative group"
+            style={{
+              width: displayWidth,
+              height: displayHeight,
+              flexShrink: 0,
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 40px rgba(0,0,0,0.7)',
+            }}
+          >
+            <AtmosphereSvg scale={scale} displayWidth={displayWidth} displayHeight={displayHeight} />
+            
+            <div className={`transition-opacity ${isResizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+              {/* Edge handles first (lower z-index) */}
+              <ResizeHandle position="n" onMouseDown={handleMouseDown('n')} />
+              <ResizeHandle position="s" onMouseDown={handleMouseDown('s')} />
+              <ResizeHandle position="e" onMouseDown={handleMouseDown('e')} />
+              <ResizeHandle position="w" onMouseDown={handleMouseDown('w')} />
+              {/* Corner handles last (higher z-index, rendered on top) */}
+              <ResizeHandle position="ne" onMouseDown={handleMouseDown('ne')} />
+              <ResizeHandle position="nw" onMouseDown={handleMouseDown('nw')} />
+              <ResizeHandle position="se" onMouseDown={handleMouseDown('se')} />
+              <ResizeHandle position="sw" onMouseDown={handleMouseDown('sw')} />
+            </div>
+          </div>
+
+          {/* Themes - below canvas */}
+          <div className="mt-3 flex items-center gap-4">
+            <div className="flex items-center gap-1">
+              {THEME_NAMES.map((name) => (
+                <ThemeSwatch key={name} name={name} />
+              ))}
+            </div>
+            <BackgroundToggle />
           </div>
         </div>
 
         {/* Guides toggle - right */}
         <GuidesToggle />
-      </div>
-
-      {/* Bottom bar: Themes */}
-      <div className="flex-shrink-0 flex justify-center py-3">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
-            {THEME_NAMES.map((name) => (
-              <ThemeSwatch key={name} name={name} />
-            ))}
-          </div>
-          <BackgroundToggle />
-        </div>
       </div>
     </div>
   )
