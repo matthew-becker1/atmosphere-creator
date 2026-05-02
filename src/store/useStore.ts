@@ -24,30 +24,38 @@ function makeCircles(theme: ThemeName, w: number, h: number): AppState['circles'
 }
 
 interface Store extends AppState {
+  isResizing: boolean
   setTheme: (theme: ThemeName) => void
   setDimensions: (w: number, h: number) => void
   setCirclePosition: (role: CircleRole, x: number, y: number) => void
+  setCircleColor: (role: CircleRole, color: string) => void
   setNoiseIntensity: (value: number) => void
+  setNoiseScale: (value: number) => void
   moveLayer: (role: CircleRole, direction: 'up' | 'down') => void
   resetAll: () => void
   toggleGuides: () => void
   setDraggingRole: (role: CircleRole | null) => void
   toggleBackground: () => void
+  toggleLogo: () => void
+  setIsResizing: (value: boolean) => void
 }
 
 const DEFAULT_WIDTH = 1080
 const DEFAULT_HEIGHT = 1920
 
 export const useStore = create<Store>((set, get) => ({
-  theme: 'twilight',
+  theme: 'day',
   width: DEFAULT_WIDTH,
   height: DEFAULT_HEIGHT,
   showGuides: false,
   draggingRole: null,
   darkBackground: true,
+  showLogo: false,
   noiseIntensity: DEFAULT_NOISE,
+  noiseScale: 1,
   layerOrder: DEFAULT_LAYER_ORDER,
-  circles: makeCircles('twilight', DEFAULT_WIDTH, DEFAULT_HEIGHT),
+  circles: makeCircles('day', DEFAULT_WIDTH, DEFAULT_HEIGHT),
+  isResizing: false,
 
   setTheme: (theme) =>
     set((s) => ({
@@ -76,7 +84,16 @@ export const useStore = create<Store>((set, get) => ({
       return { circles: updated }
     }),
 
+  setCircleColor: (role, color) =>
+    set((s) => {
+      const idx = s.circles.findIndex((c) => c.role === role)
+      const updated = [...s.circles] as AppState['circles']
+      updated[idx] = { ...s.circles[idx], color }
+      return { circles: updated }
+    }),
+
   setNoiseIntensity: (value) => set({ noiseIntensity: Math.min(1, Math.max(0, value)) }),
+  setNoiseScale: (value) => set({ noiseScale: Math.min(3, Math.max(0.1, value)) }),
 
   moveLayer: (role, direction) =>
     set((s) => {
@@ -92,10 +109,13 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       circles: makeCircles(s.theme, s.width, s.height),
       noiseIntensity: DEFAULT_NOISE,
+      noiseScale: 1,
       layerOrder: DEFAULT_LAYER_ORDER,
     })),
 
   toggleGuides: () => set((s) => ({ showGuides: !s.showGuides })),
   setDraggingRole: (role) => set({ draggingRole: role }),
   toggleBackground: () => set((s) => ({ darkBackground: !s.darkBackground })),
+  toggleLogo: () => set((s) => ({ showLogo: !s.showLogo })),
+  setIsResizing: (value) => set({ isResizing: value }),
 }))
