@@ -20,6 +20,7 @@ export function DragHandle({ circle, scale }: Props) {
       cy={circle.y}
       r={r}
       fill={circle.color}
+      fillOpacity={0.45}
       stroke="rgba(255,255,255,0.9)"
       strokeWidth={Math.max(1.5, (active ? 3 : 2) / scale)}
       style={{ cursor: active ? 'grabbing' : 'grab' }}

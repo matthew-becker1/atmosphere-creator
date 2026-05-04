@@ -607,19 +607,23 @@ function ThemeScrubber({ width }: { width: number }) {
         </div>
       </div>
 
-      {/* Labels */}
-      <div className="flex justify-between -mt-2">
-        {THEME_NAMES.map((name, i) => (
-          <button
-            key={name}
-            onClick={() => setThemePosition(i)}
-            className={`text-[9px] uppercase tracking-widest capitalize transition-colors ${
-              Math.round(themePosition) === i ? 'text-white/60' : 'text-white/20 hover:text-white/45'
-            }`}
-          >
-            {name}
-          </button>
-        ))}
+      {/* Labels — centered under each stop dot */}
+      <div className="relative h-5">
+        {THEME_NAMES.map((name, i) => {
+          const isActive = Math.round(themePosition) === i
+          return (
+            <button
+              key={name}
+              onClick={() => setThemePosition(i)}
+              className={`absolute -translate-x-1/2 text-[11px] uppercase tracking-widest capitalize transition-colors whitespace-nowrap ${
+                isActive ? 'text-white/70 underline underline-offset-2' : 'text-white/30 hover:text-white/55'
+              }`}
+              style={{ left: `${(i / (THEME_NAMES.length - 1)) * 100}%` }}
+            >
+              {name}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -735,8 +739,8 @@ export function PreviewArea() {
         >
           <div className="min-h-full flex items-start justify-center pt-14 px-8 pb-14">
             <div
-              className="w-full max-w-[540px]" style={{ backgroundColor: '#140020' }}
-              style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07)' }}
+              className="w-full max-w-[540px]"
+              style={{ backgroundColor: '#140020', boxShadow: '0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07)' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-end justify-between px-10 pt-10 pb-8 border-b border-white/[0.06]">
@@ -836,18 +840,20 @@ export function PreviewArea() {
                     >
                       H
                     </span>
-                    <NumericInput
-                      value={height}
-                      onChange={(h) => setDimensions(width, h)}
-                      min={100} max={4000}
-                      className="w-24 text-3xl font-light text-white/70 opacity-80"
-                      title="Height"
-                    />
+                    <div className="flex items-baseline gap-1">
+                      <NumericInput
+                        value={height}
+                        onChange={(h) => setDimensions(width, h)}
+                        min={100} max={4000}
+                        className="w-24 text-3xl font-light text-white/70 opacity-80"
+                        title="Height"
+                      />
+                      <span className="text-[9px] text-white/20 font-mono leading-none">{zoomPct}%</span>
+                    </div>
                   </div>
                 </div>
                 <div className="relative flex items-center justify-center" style={{ width: displayWidth }}>
                   <PresetDropdown />
-                  {zoomControls}
                 </div>
               </>
             )}
