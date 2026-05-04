@@ -3,4 +3,4 @@
 @tailwind utilities;
 
 * { box-sizing: border-box; }
-body { margin: 0; background: #0a0a0a; color: #e5e5e5; font-family: system-ui, sans-serif; }
+body { margin: 0; background: #1d0029; color: #e5e5e5; font-family: system-ui, sans-serif; }

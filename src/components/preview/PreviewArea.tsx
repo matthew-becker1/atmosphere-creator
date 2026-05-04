@@ -486,6 +486,8 @@ function ThemeScrubber({ width }: { width: number }) {
   const isDraggingRef = useRef(false)
   const [isDragging, setIsDragging] = useState(false)
   const trackRef = useRef<HTMLDivElement>(null)
+  const lastClientXRef = useRef(0)
+  const [velocity, setVelocity] = useState(0)
 
   const getPos = (e: React.PointerEvent) => {
     if (!trackRef.current) return 0
@@ -497,12 +499,17 @@ function ThemeScrubber({ width }: { width: number }) {
     e.preventDefault()
     ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
     isDraggingRef.current = true
+    lastClientXRef.current = e.clientX
     setIsDragging(true)
+    setVelocity(0)
     setThemePosition(getPos(e))
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isDraggingRef.current) return
+    const dx = e.clientX - lastClientXRef.current
+    lastClientXRef.current = e.clientX
+    setVelocity(dx)
     setThemePosition(getPos(e))
   }
 
@@ -510,49 +517,104 @@ function ThemeScrubber({ width }: { width: number }) {
     ;(e.currentTarget as Element).releasePointerCapture(e.pointerId)
     isDraggingRef.current = false
     setIsDragging(false)
+    setVelocity(0)
     setThemePosition(Math.round(useStore.getState().themePosition))
   }
 
   const onLostPointerCapture = () => {
     isDraggingRef.current = false
     setIsDragging(false)
+    setVelocity(0)
   }
 
+  // Velocity stretch + position melt feed into the gooey deform
+  const velPull = Math.min(Math.abs(velocity) * 0.08, 0.9)
+  const lo = Math.min(Math.floor(themePosition), THEME_NAMES.length - 2)
+  const frac = themePosition - lo
+  const melt = Math.sin(Math.PI * frac)
+  const scaleX = 1 + melt * 1.1 + velPull
+  const scaleY = Math.max(0.45, 1 - melt * 0.38 - velPull * 0.12)
+  // Directional teardrop: leading edge tapers, trailing stays round
+  const velNorm = Math.sign(velocity) * Math.min(Math.abs(velocity) / 8, 1)
+  const leadPct = Math.round(Math.max(16, 50 - Math.abs(velNorm) * 36))
+  const borderRadius = Math.abs(velNorm) > 0.05
+    ? velNorm > 0
+      ? `50% ${leadPct}% ${leadPct}% 50%`
+      : `${leadPct}% 50% 50% ${leadPct}%`
+    : '50%'
+
+  const trackWidth = Math.round(width * 0.38)
   const thumbPct = (themePosition / (THEME_NAMES.length - 1)) * 100
   const trackGradient = `linear-gradient(to right, ${THEME_NAMES.map((n, i) => `${THEMES[n].main} ${(i / (THEME_NAMES.length - 1) * 100).toFixed(1)}%`).join(', ')})`
 
   return (
-    <div style={{ width }}>
-      {/* Track — large hit area with slim visible bar */}
+    <div style={{ width: trackWidth }}>
+      {/* SVG gooey filter: blur then high-contrast alpha threshold */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <filter id="scrubber-gooey" x="-50%" y="-200%" width="200%" height="500%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+            <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" />
+          </filter>
+        </defs>
+      </svg>
+
       <div
         ref={trackRef}
-        className="relative flex items-center py-3 cursor-grab active:cursor-grabbing select-none"
+        className="relative py-6 cursor-grab active:cursor-grabbing select-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onLostPointerCapture={onLostPointerCapture}
       >
-        <div className="w-full h-[3px] rounded-full" style={{ background: trackGradient }} />
-        {/* Thumb */}
+        {/* Track line — outside gooey filter, always crisp */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[18px] h-[18px] rounded-full border-2 border-white pointer-events-none"
-          style={{
-            left: `${thumbPct}%`,
-            backgroundColor: thumbColor,
-            boxShadow: '0 2px 12px rgba(0,0,0,0.6)',
-            transition: isDragging ? 'none' : 'left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          }}
+          className="absolute left-0 right-0 h-[2px] rounded-full"
+          style={{ top: '50%', transform: 'translateY(-50%)', background: trackGradient }}
         />
+
+        {/* Gooey layer: stop dots + thumb merge organically */}
+        <div className="absolute inset-0 pointer-events-none" style={{ filter: 'url(#scrubber-gooey)' }}>
+          {THEME_NAMES.map((name, i) => (
+            <div
+              key={name}
+              className="absolute rounded-full"
+              style={{
+                top: '50%',
+                left: `${(i / (THEME_NAMES.length - 1)) * 100}%`,
+                width: 13,
+                height: 13,
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: THEMES[name].main,
+              }}
+            />
+          ))}
+          <div
+            className="absolute rounded-full"
+            style={{
+              top: '50%',
+              left: `${thumbPct}%`,
+              width: 28,
+              height: 28,
+              backgroundColor: thumbColor,
+              borderRadius,
+              transform: `translate(-50%, -50%) scaleX(${scaleX.toFixed(3)}) scaleY(${scaleY.toFixed(3)})`,
+              transition: isDragging
+                ? 'background-color 0.05s, border-radius 0.08s'
+                : 'left 0.22s cubic-bezier(0.22, 1.8, 0.36, 1), transform 0.22s cubic-bezier(0.22, 1.8, 0.36, 1), border-radius 0.18s, background-color 0.08s',
+            }}
+          />
+        </div>
       </div>
 
       {/* Labels */}
-      <div className="flex justify-between -mt-1">
+      <div className="flex justify-between -mt-2">
         {THEME_NAMES.map((name, i) => (
           <button
             key={name}
             onClick={() => setThemePosition(i)}
-            className={`text-[9px] uppercase tracking-widest transition-colors capitalize ${
-              Math.round(themePosition) === i ? 'text-white/60' : 'text-white/25 hover:text-white/50'
+            className={`text-[9px] uppercase tracking-widest capitalize transition-colors ${
+              Math.round(themePosition) === i ? 'text-white/60' : 'text-white/20 hover:text-white/45'
             }`}
           >
             {name}
@@ -664,7 +726,7 @@ export function PreviewArea() {
   )
 
   return (
-    <div className="flex-1 relative flex flex-col min-h-0 bg-neutral-950">
+    <div className="flex-1 relative flex flex-col min-h-0" style={{ backgroundColor: '#1d0029' }}>
       {/* Download modal */}
       {exportOpen && (
         <div
@@ -673,7 +735,7 @@ export function PreviewArea() {
         >
           <div className="min-h-full flex items-start justify-center pt-14 px-8 pb-14">
             <div
-              className="w-full max-w-[540px] bg-neutral-900"
+              className="w-full max-w-[540px]" style={{ backgroundColor: '#140020' }}
               style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07)' }}
               onClick={(e) => e.stopPropagation()}
             >

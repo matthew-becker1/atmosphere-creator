@@ -90,8 +90,8 @@ export function AtmosphereSvg({ scale, displayWidth, displayHeight }: Props) {
 
         {triptych && (
           <>
-            <rect x={TRIPTYCH_PANEL_W} y={0} width={TRIPTYCH_GAP} height={H} fill="#0a0a0a" />
-            <rect x={TRIPTYCH_PANEL_W * 2 + TRIPTYCH_GAP} y={0} width={TRIPTYCH_GAP} height={H} fill="#0a0a0a" />
+            <rect x={TRIPTYCH_PANEL_W} y={0} width={TRIPTYCH_GAP} height={H} fill="#1d0029" />
+            <rect x={TRIPTYCH_PANEL_W * 2 + TRIPTYCH_GAP} y={0} width={TRIPTYCH_GAP} height={H} fill="#1d0029" />
           </>
         )}
       </g>
