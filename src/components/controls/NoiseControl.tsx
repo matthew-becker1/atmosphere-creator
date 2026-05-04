@@ -1,7 +1,5 @@
 import { useStore } from '../../store/useStore'
-import { DEFAULT_NOISE } from '../../lib/geometry'
-
-const DEFAULT_NOISE_SCALE = 1
+import { DEFAULT_NOISE, DEFAULT_NOISE_SCALE } from '../../lib/geometry'
 
 export function NoiseControl() {
   const noiseIntensity = useStore((s) => s.noiseIntensity)

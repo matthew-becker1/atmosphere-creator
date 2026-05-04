@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import type { AppState, ThemeName, CircleRole, CircleState } from '../types'
 import { THEMES, DEFAULT_ANCHORS } from '../constants/themes'
-import { computeToleranceBounds, clampToTolerance, DEFAULT_NOISE } from '../lib/geometry'
+import { constrainCircle, DEFAULT_NOISE, DEFAULT_NOISE_SCALE } from '../lib/geometry'
+import { TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_H } from '../constants/triptych'
 
-const DEFAULT_LAYER_ORDER: AppState['layerOrder'] = ['depth', 'main', 'highlight']
+const DEFAULT_LAYER_ORDER: AppState['layerOrder'] = ['highlight', 'main', 'depth']
 
 function makeCircles(theme: ThemeName, w: number, h: number): AppState['circles'] {
   const colors = THEMES[theme]
@@ -24,9 +25,9 @@ function makeCircles(theme: ThemeName, w: number, h: number): AppState['circles'
 }
 
 interface Store extends AppState {
-  isResizing: boolean
   setTheme: (theme: ThemeName) => void
   setDimensions: (w: number, h: number) => void
+  setTriptych: (v: boolean) => void
   setCirclePosition: (role: CircleRole, x: number, y: number) => void
   setCircleColor: (role: CircleRole, color: string) => void
   setNoiseIntensity: (value: number) => void
@@ -37,7 +38,6 @@ interface Store extends AppState {
   setDraggingRole: (role: CircleRole | null) => void
   toggleBackground: () => void
   toggleLogo: () => void
-  setIsResizing: (value: boolean) => void
 }
 
 const DEFAULT_WIDTH = 1080
@@ -47,15 +47,15 @@ export const useStore = create<Store>((set, get) => ({
   theme: 'day',
   width: DEFAULT_WIDTH,
   height: DEFAULT_HEIGHT,
+  triptych: false,
   showGuides: false,
   draggingRole: null,
   darkBackground: true,
   showLogo: false,
   noiseIntensity: DEFAULT_NOISE,
-  noiseScale: 1,
+  noiseScale: DEFAULT_NOISE_SCALE,
   layerOrder: DEFAULT_LAYER_ORDER,
   circles: makeCircles('day', DEFAULT_WIDTH, DEFAULT_HEIGHT),
-  isResizing: false,
 
   setTheme: (theme) =>
     set((s) => ({
@@ -70,15 +70,21 @@ export const useStore = create<Store>((set, get) => ({
     set(() => ({
       width: w,
       height: h,
+      triptych: false,
       circles: makeCircles(get().theme, w, h),
     })),
+
+  setTriptych: (v) =>
+    set((s) => v
+      ? { triptych: true, width: TRIPTYCH_TOTAL_W, height: TRIPTYCH_PANEL_H, circles: makeCircles(s.theme, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_H) }
+      : { triptych: false }
+    ),
 
   setCirclePosition: (role, x, y) =>
     set((s) => {
       const idx = s.circles.findIndex((c) => c.role === role)
       const circle = s.circles[idx]
-      const bounds = computeToleranceBounds(circle.anchorX, circle.anchorY, s.width, s.height)
-      const clamped = clampToTolerance(x, y, bounds)
+      const clamped = constrainCircle(role, x, y, s.width, s.height)
       const updated = [...s.circles] as AppState['circles']
       updated[idx] = { ...circle, x: clamped.x, y: clamped.y }
       return { circles: updated }
@@ -109,7 +115,7 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       circles: makeCircles(s.theme, s.width, s.height),
       noiseIntensity: DEFAULT_NOISE,
-      noiseScale: 1,
+      noiseScale: DEFAULT_NOISE_SCALE,
       layerOrder: DEFAULT_LAYER_ORDER,
     })),
 
@@ -117,5 +123,4 @@ export const useStore = create<Store>((set, get) => ({
   setDraggingRole: (role) => set({ draggingRole: role }),
   toggleBackground: () => set((s) => ({ darkBackground: !s.darkBackground })),
   toggleLogo: () => set((s) => ({ showLogo: !s.showLogo })),
-  setIsResizing: (value) => set({ isResizing: value }),
 }))

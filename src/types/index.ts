@@ -14,6 +14,7 @@ export interface AppState {
   theme: ThemeName
   width: number
   height: number
+  triptych: boolean
   showGuides: boolean
   draggingRole: CircleRole | null
   noiseIntensity: number

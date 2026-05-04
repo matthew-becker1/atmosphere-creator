@@ -31,5 +31,14 @@ export function useDrag(role: CircleRole, scale: number) {
     ;(e.target as Element).releasePointerCapture(e.pointerId)
   }, [])
 
-  return { onPointerDown, onPointerMove, onPointerUp }
+  const onPointerCancel = useCallback((e: React.PointerEvent) => {
+    isDragging.current = false
+    ;(e.target as Element).releasePointerCapture(e.pointerId)
+  }, [])
+
+  const onLostPointerCapture = useCallback(() => {
+    isDragging.current = false
+  }, [])
+
+  return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onLostPointerCapture }
 }

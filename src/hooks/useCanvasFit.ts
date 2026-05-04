@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
-import { useStore } from '../store/useStore'
 
 function computeFitScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number) {
-  const paddingX = 100
-  const paddingY = 40 // minimal vertical padding since top/bottom bars are outside this container
+  const paddingX = 120  // logo + guides toggles flanking the canvas
+  const paddingY = 260  // dimension pill + theme row (~100px) + ~80px margin each side
   const availableW = containerWidth - paddingX
   const availableH = containerHeight - paddingY
   if (availableW <= 0 || availableH <= 0) return 0.1
-  const scaleX = availableW / canvasWidth
-  const scaleY = availableH / canvasHeight
-  return Math.min(scaleX, scaleY)
+  return Math.min(1, availableW / canvasWidth, availableH / canvasHeight)
 }
 
 export function useCanvasFit(width: number, height: number) {
@@ -17,17 +14,14 @@ export function useCanvasFit(width: number, height: number) {
   const [fitScale, setFitScale] = useState(0.5)
   const [manualScale, setManualScale] = useState<number | null>(null)
   const lastContainerSize = useRef({ w: 0, h: 0 })
-  const isResizing = useStore((s) => s.isResizing)
 
-  const scale = manualScale ?? fitScale
+  // Always cap at fitScale so controls are never pushed off screen
+  const scale = manualScale !== null ? Math.min(manualScale, fitScale) : fitScale
 
-  // Compute fit scale without triggering re-renders during drag
   const computeAndSetFit = useCallback((containerW: number, containerH: number) => {
-    const newFit = computeFitScale(containerW, containerH, width, height)
-    setFitScale(newFit)
+    setFitScale(computeFitScale(containerW, containerH, width, height))
   }, [width, height])
 
-  // Initial calculation and when container resizes
   useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -38,21 +32,15 @@ export function useCanvasFit(width: number, height: number) {
     }
   }, [computeAndSetFit])
 
-  // Recalculate when canvas dimensions change (use last known container size)
-  // Skip during resize - will recalculate when resize ends
+  // Always keep fitScale current — including during resize
   useEffect(() => {
-    if (isResizing) return
     const { w, h } = lastContainerSize.current
-    if (w > 0 && h > 0) {
-      computeAndSetFit(w, h)
-    }
-  }, [width, height, isResizing, computeAndSetFit])
+    if (w > 0 && h > 0) computeAndSetFit(w, h)
+  }, [width, height, computeAndSetFit])
 
-  // Watch for container resize
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-
     const observer = new ResizeObserver((entries) => {
       const { width: cw, height: ch } = entries[0].contentRect
       if (cw > 0 && ch > 0) {
@@ -60,19 +48,15 @@ export function useCanvasFit(width: number, height: number) {
         computeAndSetFit(cw, ch)
       }
     })
-
     observer.observe(el)
     return () => observer.disconnect()
   }, [computeAndSetFit])
 
   const setScale = useCallback((newScale: number) => {
-    const clamped = Math.max(0.05, Math.min(2, newScale))
-    setManualScale(clamped)
+    setManualScale(Math.max(0.05, Math.min(2, newScale)))
   }, [])
 
-  const resetToFit = useCallback(() => {
-    setManualScale(null)
-  }, [])
+  const resetToFit = useCallback(() => setManualScale(null), [])
 
   return {
     containerRef,

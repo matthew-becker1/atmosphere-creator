@@ -9,6 +9,6 @@ export const PRESETS: CanvasPreset[] = [
   { label: '1080 × 1350', width: 1080, height: 1350 },
   { label: '1600 × 900',  width: 1600, height: 900  },
   { label: '300 × 600',   width: 300,  height: 600  },
-  { label: '160 × 600',   width: 160,  height: 600  },
+  { label: '160 × 600',   width: 160,  height: 600  }, // Wide Skyscraper IAB unit
   { label: '970 × 250',   width: 970,  height: 250  },
 ]

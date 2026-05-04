@@ -7,6 +7,8 @@ export const THEMES: Record<ThemeName, { depth: string; main: string; highlight:
   day:      { depth: '#2D66FF', main: '#A2EFFF', highlight: '#FFAE6B' },
 }
 
+export const THEME_NAMES: ThemeName[] = ['twilight', 'dawn', 'morning', 'day']
+
 export const DEFAULT_ANCHORS = {
   depth:     { x: 0,   y: 1   },
   main:      { x: 0.5, y: 0.5 },
