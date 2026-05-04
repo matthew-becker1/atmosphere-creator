@@ -27,7 +27,7 @@ export function DragHandle({ circle, scale }: Props) {
       onPointerMove={onPointerMove}
       onPointerUp={(e) => { setActive(false); setDraggingRole(null); onPointerUp(e) }}
       onPointerCancel={(e) => { setActive(false); setDraggingRole(null); onPointerCancel(e) }}
-      onLostPointerCapture={(e) => { setActive(false); setDraggingRole(null); onLostPointerCapture(e) }}
+      onLostPointerCapture={() => { setActive(false); setDraggingRole(null); onLostPointerCapture() }}
     />
   )
 }
