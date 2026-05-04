@@ -19,6 +19,20 @@ export function computeNoiseFrequency(w: number, h: number, noiseScale: number):
   return Math.min(raw, NOISE_MAX_FREQUENCY)
 }
 
+export function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+export function lerpColor(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = hexToRgb(a)
+  const [br, bg, bb] = hexToRgb(b)
+  const r = Math.round(ar + (br - ar) * t)
+  const g = Math.round(ag + (bg - ag) * t)
+  const bl = Math.round(ab + (bb - ab) * t)
+  return '#' + [r, g, bl].map((v) => v.toString(16).padStart(2, '0')).join('')
+}
+
 export const DEFAULT_NOISE = 1
 export const DEFAULT_NOISE_SCALE = 1
 

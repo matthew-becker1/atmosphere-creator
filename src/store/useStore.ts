@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { AppState, ThemeName, CircleRole, CircleState } from '../types'
-import { THEMES, DEFAULT_ANCHORS } from '../constants/themes'
-import { constrainCircle, DEFAULT_NOISE, DEFAULT_NOISE_SCALE } from '../lib/geometry'
+import { THEMES, THEME_NAMES as THEMES_ARRAY, DEFAULT_ANCHORS } from '../constants/themes'
+import { constrainCircle, DEFAULT_NOISE, DEFAULT_NOISE_SCALE, lerpColor } from '../lib/geometry'
 import { TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_H } from '../constants/triptych'
 
 const DEFAULT_LAYER_ORDER: AppState['layerOrder'] = ['highlight', 'main', 'depth']
@@ -26,6 +26,7 @@ function makeCircles(theme: ThemeName, w: number, h: number): AppState['circles'
 
 interface Store extends AppState {
   setTheme: (theme: ThemeName) => void
+  setThemePosition: (pos: number) => void
   setDimensions: (w: number, h: number) => void
   setTriptych: (v: boolean) => void
   setCirclePosition: (role: CircleRole, x: number, y: number) => void
@@ -45,6 +46,7 @@ const DEFAULT_HEIGHT = 1920
 
 export const useStore = create<Store>((set, get) => ({
   theme: 'day',
+  themePosition: 3,
   width: DEFAULT_WIDTH,
   height: DEFAULT_HEIGHT,
   triptych: false,
@@ -60,11 +62,32 @@ export const useStore = create<Store>((set, get) => ({
   setTheme: (theme) =>
     set((s) => ({
       theme,
+      themePosition: THEMES_ARRAY.indexOf(theme),
       circles: s.circles.map((c) => ({
         ...c,
         color: THEMES[theme][c.role],
       })) as AppState['circles'],
     })),
+
+  setThemePosition: (pos) => {
+    const clamped = Math.max(0, Math.min(THEMES_ARRAY.length - 1, pos))
+    const lo = Math.min(Math.floor(clamped), THEMES_ARRAY.length - 2)
+    const hi = lo + 1
+    const t = clamped - lo
+    const themeA = THEMES[THEMES_ARRAY[lo]]
+    const themeB = THEMES[THEMES_ARRAY[hi]]
+    const colors = {
+      depth:     lerpColor(themeA.depth,     themeB.depth,     t),
+      main:      lerpColor(themeA.main,      themeB.main,      t),
+      highlight: lerpColor(themeA.highlight, themeB.highlight, t),
+    }
+    const nearest = THEMES_ARRAY[Math.round(clamped)]
+    set((s) => ({
+      themePosition: clamped,
+      theme: nearest,
+      circles: s.circles.map((c) => ({ ...c, color: colors[c.role] })) as AppState['circles'],
+    }))
+  },
 
   setDimensions: (w, h) =>
     set(() => ({

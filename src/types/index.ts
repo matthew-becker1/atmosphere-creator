@@ -12,6 +12,7 @@ export interface CircleState {
 
 export interface AppState {
   theme: ThemeName
+  themePosition: number
   width: number
   height: number
   triptych: boolean

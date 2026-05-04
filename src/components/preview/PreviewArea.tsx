@@ -479,29 +479,87 @@ function GuidesToggle() {
   )
 }
 
-function ThemeSwatch({ name }: { name: ThemeName }) {
-  const currentTheme = useStore((s) => s.theme)
-  const setTheme = useStore((s) => s.setTheme)
-  const theme = THEMES[name]
-  const isActive = currentTheme === name
+function ThemeScrubber({ width }: { width: number }) {
+  const themePosition = useStore((s) => s.themePosition)
+  const setThemePosition = useStore((s) => s.setThemePosition)
+  const thumbColor = useStore((s) => s.circles.find((c) => c.role === 'main')!.color)
+  const isDraggingRef = useRef(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  const getPos = (e: React.PointerEvent) => {
+    if (!trackRef.current) return 0
+    const rect = trackRef.current.getBoundingClientRect()
+    return Math.max(0, Math.min(THEME_NAMES.length - 1, ((e.clientX - rect.left) / rect.width) * (THEME_NAMES.length - 1)))
+  }
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault()
+    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
+    isDraggingRef.current = true
+    setIsDragging(true)
+    setThemePosition(getPos(e))
+  }
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return
+    setThemePosition(getPos(e))
+  }
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    ;(e.currentTarget as Element).releasePointerCapture(e.pointerId)
+    isDraggingRef.current = false
+    setIsDragging(false)
+    setThemePosition(Math.round(useStore.getState().themePosition))
+  }
+
+  const onLostPointerCapture = () => {
+    isDraggingRef.current = false
+    setIsDragging(false)
+  }
+
+  const thumbPct = (themePosition / (THEME_NAMES.length - 1)) * 100
+  const trackGradient = `linear-gradient(to right, ${THEME_NAMES.map((n, i) => `${THEMES[n].main} ${(i / (THEME_NAMES.length - 1) * 100).toFixed(1)}%`).join(', ')})`
 
   return (
-    <button
-      onClick={() => setTheme(name)}
-      className={`flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all bg-white/[0.10] ${
-        isActive
-          ? 'bg-white/[0.18] ring-1 ring-white/25'
-          : 'hover:bg-white/[0.15]'
-      }`}
-      title={name}
-    >
-      <div className="flex -space-x-1">
-        <div className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: theme.depth }} />
-        <div className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: theme.main }} />
-        <div className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: theme.highlight }} />
+    <div style={{ width }}>
+      {/* Track — large hit area with slim visible bar */}
+      <div
+        ref={trackRef}
+        className="relative flex items-center py-3 cursor-grab active:cursor-grabbing select-none"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onLostPointerCapture={onLostPointerCapture}
+      >
+        <div className="w-full h-[3px] rounded-full" style={{ background: trackGradient }} />
+        {/* Thumb */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[18px] h-[18px] rounded-full border-2 border-white pointer-events-none"
+          style={{
+            left: `${thumbPct}%`,
+            backgroundColor: thumbColor,
+            boxShadow: '0 2px 12px rgba(0,0,0,0.6)',
+            transition: isDragging ? 'none' : 'left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          }}
+        />
       </div>
-      <span className={`text-[9px] capitalize ${isActive ? 'text-white/70' : 'text-white/40'}`}>{name}</span>
-    </button>
+
+      {/* Labels */}
+      <div className="flex justify-between -mt-1">
+        {THEME_NAMES.map((name, i) => (
+          <button
+            key={name}
+            onClick={() => setThemePosition(i)}
+            className={`text-[9px] uppercase tracking-widest transition-colors capitalize ${
+              Math.round(themePosition) === i ? 'text-white/60' : 'text-white/25 hover:text-white/50'
+            }`}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -760,12 +818,8 @@ export function PreviewArea() {
           </div>
 
           {/* Themes - below canvas */}
-          <div className="mt-3 flex flex-col items-center gap-2">
-            <div className="flex items-center gap-1">
-              {THEME_NAMES.map((name) => (
-                <ThemeSwatch key={name} name={name} />
-              ))}
-            </div>
+          <div className="mt-1 flex flex-col items-center gap-2">
+            <ThemeScrubber width={displayWidth} />
             <BackgroundToggle />
           </div>
         </div>
