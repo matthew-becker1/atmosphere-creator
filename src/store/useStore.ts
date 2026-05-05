@@ -3,6 +3,7 @@ import type { AppState, ThemeName, CircleRole, CircleState } from '../types'
 import { THEMES, THEME_NAMES as THEMES_ARRAY, DEFAULT_ANCHORS } from '../constants/themes'
 import { constrainCircle, DEFAULT_NOISE, DEFAULT_NOISE_SCALE, lerpColor } from '../lib/geometry'
 import { TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_H } from '../constants/triptych'
+import { LIVECARD_TOTAL_W, LIVECARD_COVE_H } from '../constants/livecard'
 
 const DEFAULT_LAYER_ORDER: AppState['layerOrder'] = ['highlight', 'main', 'depth']
 
@@ -29,6 +30,7 @@ interface Store extends AppState {
   setThemePosition: (pos: number) => void
   setDimensions: (w: number, h: number) => void
   setTriptych: (v: boolean) => void
+  setLivecard: (v: boolean) => void
   setCirclePosition: (role: CircleRole, x: number, y: number) => void
   setCircleColor: (role: CircleRole, color: string) => void
   setNoiseIntensity: (value: number) => void
@@ -50,6 +52,7 @@ export const useStore = create<Store>((set, get) => ({
   width: DEFAULT_WIDTH,
   height: DEFAULT_HEIGHT,
   triptych: false,
+  livecard: false,
   showGuides: false,
   draggingRole: null,
   darkBackground: true,
@@ -94,13 +97,20 @@ export const useStore = create<Store>((set, get) => ({
       width: w,
       height: h,
       triptych: false,
+      livecard: false,
       circles: makeCircles(get().theme, w, h),
     })),
 
   setTriptych: (v) =>
     set((s) => v
-      ? { triptych: true, width: TRIPTYCH_TOTAL_W, height: TRIPTYCH_PANEL_H, circles: makeCircles(s.theme, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_H) }
+      ? { triptych: true, livecard: false, width: TRIPTYCH_TOTAL_W, height: TRIPTYCH_PANEL_H, circles: makeCircles(s.theme, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_H) }
       : { triptych: false }
+    ),
+
+  setLivecard: (v) =>
+    set((s) => v
+      ? { livecard: true, triptych: false, width: LIVECARD_TOTAL_W, height: LIVECARD_COVE_H, circles: makeCircles(s.theme, LIVECARD_TOTAL_W, LIVECARD_COVE_H) }
+      : { livecard: false }
     ),
 
   setCirclePosition: (role, x, y) =>

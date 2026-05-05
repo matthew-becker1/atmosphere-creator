@@ -1,6 +1,7 @@
 import { useStore } from '../../store/useStore'
 import { computeRadius, computeDefaultBlur, computeFilterPadding, computeNoiseFrequency } from '../../lib/geometry'
 import { TRIPTYCH_GAP, TRIPTYCH_PANEL_W } from '../../constants/triptych'
+import { LIVECARD_COVES, LIVECARD_COVE_W, LIVECARD_COVE_GAP } from '../../constants/livecard'
 import { GuideOverlay } from './GuideOverlay'
 import { DragHandle } from './DragHandle'
 
@@ -15,7 +16,7 @@ const LOGO_VIEWBOX_WIDTH = 965.8955
 const LOGO_VIEWBOX_HEIGHT = 299.9957
 
 export function AtmosphereSvg({ scale, displayWidth, displayHeight }: Props) {
-  const { width: W, height: H, circles, layerOrder, showGuides, draggingRole, noiseIntensity, noiseScale, darkBackground, showLogo, triptych } = useStore()
+  const { width: W, height: H, circles, layerOrder, showGuides, draggingRole, noiseIntensity, noiseScale, darkBackground, showLogo, triptych, livecard } = useStore()
   const bgColor = darkBackground ? '#000000' : '#ffffff'
   const orderedCircles = layerOrder.map((role) => circles.find((c) => c.role === role)!)
   const radius = computeRadius(W, H)
@@ -73,7 +74,7 @@ export function AtmosphereSvg({ scale, displayWidth, displayHeight }: Props) {
           />
         )}
 
-        {showLogo && (() => {
+        {showLogo && !livecard && (() => {
           const refW = triptych ? TRIPTYCH_PANEL_W : W
           const centerX = triptych ? TRIPTYCH_PANEL_W + TRIPTYCH_GAP + TRIPTYCH_PANEL_W / 2 : W / 2
           const logoWidth = refW * 0.5
@@ -88,12 +89,32 @@ export function AtmosphereSvg({ scale, displayWidth, displayHeight }: Props) {
           )
         })()}
 
+        {showLogo && livecard && (() => {
+          const logoWidth = LIVECARD_COVE_W * 0.5
+          const logoScale = logoWidth / LOGO_VIEWBOX_WIDTH
+          const logoHeight = LOGO_VIEWBOX_HEIGHT * logoScale
+          const logoY = (H - logoHeight) / 2
+          return LIVECARD_COVES.map((cove) => {
+            const centerX = cove.x + LIVECARD_COVE_W / 2
+            const logoX = centerX - logoWidth / 2
+            return (
+              <g key={cove.label} transform={`translate(${logoX}, ${logoY}) scale(${logoScale})`}>
+                <path d={LOGO_PATH} fill="#fafafc" />
+              </g>
+            )
+          })
+        })()}
+
         {triptych && (
           <>
             <rect x={TRIPTYCH_PANEL_W} y={0} width={TRIPTYCH_GAP} height={H} fill="#1d0029" />
             <rect x={TRIPTYCH_PANEL_W * 2 + TRIPTYCH_GAP} y={0} width={TRIPTYCH_GAP} height={H} fill="#1d0029" />
           </>
         )}
+
+        {livecard && LIVECARD_COVES.slice(0, -1).map((cove) => (
+          <rect key={cove.label} x={cove.x + LIVECARD_COVE_W} y={0} width={LIVECARD_COVE_GAP} height={H} fill="#1d0029" />
+        ))}
       </g>
 
       {/* Guides and handles outside clip — overflow canvas edges freely */}

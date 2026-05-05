@@ -16,6 +16,7 @@ export interface AppState {
   width: number
   height: number
   triptych: boolean
+  livecard: boolean
   showGuides: boolean
   draggingRole: CircleRole | null
   noiseIntensity: number

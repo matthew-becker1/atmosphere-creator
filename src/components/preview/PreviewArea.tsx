@@ -7,7 +7,8 @@ import { AtmosphereSvg } from './AtmosphereSvg'
 import { THEMES, THEME_NAMES } from '../../constants/themes'
 import { PRESETS } from '../../constants/presets'
 import { TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, TRIPTYCH_TOTAL_W, TRIPTYCH_PANELS } from '../../constants/triptych'
-import { buildSvgString } from '../../lib/svgBuilder'
+import { LIVECARD_COVES, LIVECARD_COVE_W, LIVECARD_COVE_H, LIVECARD_SQUARES, LIVECARD_SQUARE_SIZE, LIVECARD_TOTAL_W } from '../../constants/livecard'
+import { buildSvgString, buildLivecardSquareSvg } from '../../lib/svgBuilder'
 import { exportSvg, exportPng, exportWebp, exportJpg, exportTriptychPanel } from '../../lib/exportPng'
 import type { ImageFormat } from '../../lib/exportPng'
 import type { ThemeName } from '../../types'
@@ -68,23 +69,41 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
-function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
+function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLivecard: boolean }) {
   const [format, setFormat] = useState<ExportFormat>('png')
   const [rasterScale, setRasterScale] = useState<1 | 2>(1)
   const [showNoisePopup, setShowNoisePopup] = useState(false)
   const [copied, setCopied] = useState(false)
   const [batchProgress, setBatchProgress] = useState<number | null>(null)
-  const { theme, width, height } = useStore((s) => ({ theme: s.theme, width: s.width, height: s.height }))
+  const { theme, width, height, noiseIntensity } = useStore((s) => ({ theme: s.theme, width: s.width, height: s.height, noiseIntensity: s.noiseIntensity }))
+  const setNoiseIntensity = useStore((s) => s.setNoiseIntensity)
+  const prevNoiseRef = useRef(noiseIntensity > 0 ? noiseIntensity : 1)
+  const noiseOn = noiseIntensity > 0
+  const toggleNoise = () => {
+    if (noiseOn) { prevNoiseRef.current = noiseIntensity; setNoiseIntensity(0) }
+    else setNoiseIntensity(prevNoiseRef.current)
+  }
 
   const isSvg = format === 'svg'
   const isBusy = batchProgress !== null
-  const batchTotal = isTriptych ? THEME_NAMES.length * TRIPTYCH_PANELS.length : THEME_NAMES.length
+  const livecardFilesPerTheme = LIVECARD_COVES.length + LIVECARD_SQUARES.length
+  const batchTotal = isTriptych
+    ? THEME_NAMES.length * TRIPTYCH_PANELS.length
+    : isLivecard
+    ? THEME_NAMES.length * livecardFilesPerTheme
+    : THEME_NAMES.length
 
   // Filename preview
   const scaleSuffix = !isSvg && rasterScale === 2 ? '@2x' : ''
-  const dimStr = isTriptych ? `${TRIPTYCH_PANEL_W}×${TRIPTYCH_PANEL_H}` : `${width}×${height}`
+  const dimStr = isTriptych
+    ? `${TRIPTYCH_PANEL_W}×${TRIPTYCH_PANEL_H}`
+    : isLivecard
+    ? `${LIVECARD_COVE_W}×${LIVECARD_COVE_H}`
+    : `${width}×${height}`
   const filenamePreview = isTriptych
     ? `atmosphere-triptych-${theme}-[panel]-${dimStr}${scaleSuffix}.${format}`
+    : isLivecard
+    ? `atmosphere-livecard-${theme}-[cove-001…square-002]-${dimStr}${scaleSuffix}.${format}`
     : `atmosphere-${theme}-${dimStr}${scaleSuffix}.${format}`
 
   // Per-format file sizes
@@ -97,9 +116,11 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
     const state = useStore.getState()
     const svgStr = isTriptych
       ? buildSvgString(state, { x: 0, w: TRIPTYCH_PANEL_W, h: TRIPTYCH_PANEL_H })
+      : isLivecard
+      ? buildSvgString(state, { x: LIVECARD_COVES[0].x, w: LIVECARD_COVE_W, h: LIVECARD_COVE_H }, { centerX: LIVECARD_COVE_W / 2, refW: LIVECARD_COVE_W })
       : buildSvgString(state)
     setSizes((s) => ({ ...s, svg: formatBytes(new TextEncoder().encode(svgStr).length) }))
-  }, [isTriptych, theme, width, height])
+  }, [isTriptych, isLivecard, theme, width, height])
 
   // Raster sizes — render one panel SVG at scale, measure all 3 formats from same canvas
   useEffect(() => {
@@ -107,12 +128,14 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
     let cancelled = false
     const state = useStore.getState()
 
-    // Always render a single-panel SVG — avoids giant triptych canvas at 2×
+    // Always render a single-panel SVG — avoids giant canvas at 2×
     const panelSvg = isTriptych
       ? buildSvgString(state, { x: 0, w: TRIPTYCH_PANEL_W, h: TRIPTYCH_PANEL_H })
+      : isLivecard
+      ? buildSvgString(state, { x: LIVECARD_COVES[0].x, w: LIVECARD_COVE_W, h: LIVECARD_COVE_H }, { centerX: LIVECARD_COVE_W / 2, refW: LIVECARD_COVE_W })
       : buildSvgString(state)
-    const sw = (isTriptych ? TRIPTYCH_PANEL_W : state.width) * rasterScale
-    const sh = (isTriptych ? TRIPTYCH_PANEL_H : state.height) * rasterScale
+    const sw = (isTriptych ? TRIPTYCH_PANEL_W : isLivecard ? LIVECARD_COVE_W : state.width) * rasterScale
+    const sh = (isTriptych ? TRIPTYCH_PANEL_H : isLivecard ? LIVECARD_COVE_H : state.height) * rasterScale
 
     const blob = new Blob([panelSvg], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -138,7 +161,7 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
     img.onerror = () => URL.revokeObjectURL(url)
     img.src = url
     return () => { cancelled = true }
-  }, [rasterScale, isTriptych, theme, width, height])
+  }, [rasterScale, isTriptych, isLivecard, theme, width, height])
 
   const handleExport = async () => {
     const state = useStore.getState()
@@ -150,6 +173,21 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
           const panel = TRIPTYCH_PANELS[i]
           const svg = buildSvgString(state, { x: panel.x, w: TRIPTYCH_PANEL_W, h: TRIPTYCH_PANEL_H })
           exportSvg(svg, `atmosphere-triptych-${state.theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}.svg`)
+          await new Promise((r) => setTimeout(r, 80))
+        }
+        setBatchProgress(null)
+      } else if (isLivecard) {
+        let idx = 0
+        for (const cove of LIVECARD_COVES) {
+          setBatchProgress(++idx)
+          const cx = cove.x + LIVECARD_COVE_W / 2
+          const svg = buildSvgString(state, { x: cove.x, w: LIVECARD_COVE_W, h: LIVECARD_COVE_H }, { centerX: cx, refW: LIVECARD_COVE_W })
+          exportSvg(svg, `atmosphere-livecard-${state.theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}.svg`)
+          await new Promise((r) => setTimeout(r, 80))
+        }
+        for (const sq of LIVECARD_SQUARES) {
+          setBatchProgress(++idx)
+          exportSvg(buildLivecardSquareSvg(state), `atmosphere-livecard-${state.theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}.svg`)
           await new Promise((r) => setTimeout(r, 80))
         }
         setBatchProgress(null)
@@ -166,6 +204,23 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
           const panel = TRIPTYCH_PANELS[i]
           const fn = `atmosphere-triptych-${state.theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}${suffix}.${fmt}`
           await exportTriptychPanel(fullSvg, panel.x, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, fn, fmt, rasterScale)
+        }
+        setBatchProgress(null)
+      } else if (isLivecard) {
+        const fullSvg = buildSvgString(state)
+        let idx = 0
+        for (const cove of LIVECARD_COVES) {
+          setBatchProgress(++idx)
+          const fn = `atmosphere-livecard-${state.theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}${suffix}.${fmt}`
+          await exportTriptychPanel(fullSvg, cove.x, LIVECARD_TOTAL_W, LIVECARD_COVE_W, LIVECARD_COVE_H, fn, fmt, rasterScale)
+        }
+        for (const sq of LIVECARD_SQUARES) {
+          setBatchProgress(++idx)
+          const sqSvg = buildLivecardSquareSvg(state)
+          const fn = `atmosphere-livecard-${state.theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}${suffix}.${fmt}`
+          if (fmt === 'png') await exportPng(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
+          else if (fmt === 'webp') await exportWebp(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
+          else await exportJpg(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
         }
         setBatchProgress(null)
       } else {
@@ -192,6 +247,19 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
             exportSvg(svg, `atmosphere-triptych-${theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}.svg`)
             await new Promise((r) => setTimeout(r, 80))
           }
+        } else if (isLivecard) {
+          for (const cove of LIVECARD_COVES) {
+            count++; setBatchProgress(count)
+            const cx = cove.x + LIVECARD_COVE_W / 2
+            const svg = buildSvgString(state, { x: cove.x, w: LIVECARD_COVE_W, h: LIVECARD_COVE_H }, { centerX: cx, refW: LIVECARD_COVE_W })
+            exportSvg(svg, `atmosphere-livecard-${theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}.svg`)
+            await new Promise((r) => setTimeout(r, 80))
+          }
+          for (const sq of LIVECARD_SQUARES) {
+            count++; setBatchProgress(count)
+            exportSvg(buildLivecardSquareSvg(state), `atmosphere-livecard-${theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}.svg`)
+            await new Promise((r) => setTimeout(r, 80))
+          }
         } else {
           count++; setBatchProgress(count)
           exportSvg(buildSvgString(state), `atmosphere-${theme}-${width}x${height}.svg`)
@@ -205,6 +273,21 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
             count++; setBatchProgress(count)
             const fn = `atmosphere-triptych-${theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}${suffix}.${fmt}`
             await exportTriptychPanel(fullSvg, panel.x, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, fn, fmt, rasterScale)
+          }
+        } else if (isLivecard) {
+          const fullSvg = buildSvgString(state)
+          for (const cove of LIVECARD_COVES) {
+            count++; setBatchProgress(count)
+            const fn = `atmosphere-livecard-${theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}${suffix}.${fmt}`
+            await exportTriptychPanel(fullSvg, cove.x, LIVECARD_TOTAL_W, LIVECARD_COVE_W, LIVECARD_COVE_H, fn, fmt, rasterScale)
+          }
+          for (const sq of LIVECARD_SQUARES) {
+            count++; setBatchProgress(count)
+            const sqSvg = buildLivecardSquareSvg(state)
+            const fn = `atmosphere-livecard-${theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}${suffix}.${fmt}`
+            if (fmt === 'png') await exportPng(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
+            else if (fmt === 'webp') await exportWebp(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
+            else await exportJpg(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
           }
         } else {
           count++; setBatchProgress(count)
@@ -229,7 +312,7 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
 
   const batchLabel = isBusy
     ? `${batchProgress} of ${batchTotal}…`
-    : isTriptych ? `Download all themes · ${batchTotal} files` : 'Download all themes'
+    : (isTriptych || isLivecard) ? `Download all themes · ${batchTotal} files` : 'Download all themes'
 
   const ALL_FORMATS: ExportFormat[] = ['svg', 'png', 'webp', 'jpg']
 
@@ -269,7 +352,28 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
           </div>
         )}
 
-        {/* 3 — Filename */}
+        {/* 3 — Noise */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] uppercase tracking-widest text-white/30">Noise</span>
+            {isSvg && noiseOn && (
+              <span className="text-[10px] text-white/25">Add manually in Figma</span>
+            )}
+          </div>
+          <button
+            onClick={toggleNoise}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+              noiseOn ? 'bg-white/15 text-white' : 'bg-white/[0.04] text-white/35 hover:bg-white/[0.08] hover:text-white/60'
+            }`}
+          >
+            <span className={`w-5 h-3 rounded-full relative transition-colors ${noiseOn ? 'bg-white/60' : 'bg-white/15'}`}>
+              <span className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${noiseOn ? 'left-2.5' : 'left-0.5'}`} />
+            </span>
+            {noiseOn ? 'On' : 'Off'}
+          </button>
+        </div>
+
+        {/* 4 — Filename */}
         <div className="flex flex-col gap-2">
           <span className="text-[10px] uppercase tracking-widest text-white/30">File</span>
           <span className="text-xs font-mono text-white/25 break-all leading-relaxed">{filenamePreview}</span>
@@ -282,11 +386,11 @@ function ExportPanel({ isTriptych }: { isTriptych: boolean }) {
             disabled={isBusy}
             className="w-full py-5 px-6 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] transition-colors disabled:opacity-40 flex flex-col items-start gap-0.5"
           >
-            <span className="text-2xl font-black uppercase tracking-tight text-white leading-none">
-              {isBusy ? `${batchProgress} of ${isTriptych ? TRIPTYCH_PANELS.length : 1}…` : 'Download'}
+            <span className="text-2xl font-black tracking-tight text-white leading-none">
+              {isBusy ? `${batchProgress} of ${isTriptych ? TRIPTYCH_PANELS.length : isLivecard ? livecardFilesPerTheme : 1}…` : 'Download'}
             </span>
             <span className="text-xs text-white/40">
-              {theme} theme{isTriptych ? ' · 3 panels' : ''}
+              {theme} theme{isTriptych ? ' · 3 panels' : isLivecard ? ' · 5 coves + 2 squares' : ''}
             </span>
           </button>
           <button
@@ -402,37 +506,41 @@ function NumericInput({
 }
 
 function PresetDropdown() {
-  const { width, height, triptych, setDimensions, setTriptych } = useStore((s) => ({
-    width: s.width, height: s.height, triptych: s.triptych,
-    setDimensions: s.setDimensions, setTriptych: s.setTriptych,
+  const { width, height, triptych, livecard, setDimensions, setTriptych, setLivecard } = useStore((s) => ({
+    width: s.width, height: s.height, triptych: s.triptych, livecard: s.livecard,
+    setDimensions: s.setDimensions, setTriptych: s.setTriptych, setLivecard: s.setLivecard,
   }))
-  const activePreset = !triptych && PRESETS.find((p) => p.width === width && p.height === height)
+  const activePreset = !triptych && !livecard && PRESETS.find((p) => p.width === width && p.height === height)
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value
     if (val === 'triptych') {
       setTriptych(true)
+    } else if (val === 'livecard') {
+      setLivecard(true)
     } else if (val !== '') {
-      setTriptych(false)
       const [w, h] = val.split('x').map(Number)
       setDimensions(w, h)
     }
   }
 
+  const currentValue = triptych ? 'triptych' : livecard ? 'livecard' : activePreset ? `${width}x${height}` : ''
+
   return (
     <select
-      value={triptych ? 'triptych' : activePreset ? `${width}x${height}` : ''}
+      value={currentValue}
       onChange={handleChange}
       className="appearance-none bg-transparent text-xs text-white/50 hover:text-white/80
         outline-none cursor-pointer transition-colors px-1 py-0 text-center"
     >
-      {!activePreset && !triptych && <option value="" className="bg-neutral-900">Preset</option>}
+      {!activePreset && !triptych && !livecard && <option value="" className="bg-neutral-900">Preset</option>}
       {PRESETS.map((p) => (
         <option key={p.label} value={`${p.width}x${p.height}`} className="bg-neutral-900">
           {p.label}
         </option>
       ))}
       <option value="triptych" className="bg-neutral-900">Triptych (3 × 1080)</option>
+      <option value="livecard" className="bg-neutral-900">Livecard MAX (5 coves + 2 sq)</option>
     </select>
   )
 }
@@ -615,12 +723,12 @@ function ThemeScrubber({ width }: { width: number }) {
             <button
               key={name}
               onClick={() => setThemePosition(i)}
-              className={`absolute -translate-x-1/2 text-[11px] uppercase tracking-widest capitalize transition-colors whitespace-nowrap ${
+              className={`absolute -translate-x-1/2 text-[11px] tracking-widest transition-colors whitespace-nowrap ${
                 isActive ? 'text-white/70 underline underline-offset-2' : 'text-white/30 hover:text-white/55'
               }`}
               style={{ left: `${(i / (THEME_NAMES.length - 1)) * 100}%` }}
             >
-              {name}
+              {name[0].toUpperCase() + name.slice(1)}
             </button>
           )
         })}
@@ -687,28 +795,16 @@ function ResizeHandle({
 // --- Main Preview Area ---
 
 export function PreviewArea() {
-  const { width, height, triptych, noiseIntensity, theme } = useStore((s) => ({
-    width: s.width, height: s.height, triptych: s.triptych, noiseIntensity: s.noiseIntensity, theme: s.theme,
+  const { width, height, triptych, livecard, theme } = useStore((s) => ({
+    width: s.width, height: s.height, triptych: s.triptych, livecard: s.livecard, theme: s.theme,
   }))
   const setDimensions = useStore((s) => s.setDimensions)
-  const setNoiseIntensity = useStore((s) => s.setNoiseIntensity)
   const [isResizing, setIsResizing] = useState(false)
-  const prevNoiseRef = useRef(noiseIntensity > 0 ? noiseIntensity : 1)
   const wScrub = useScrub(width, (w) => setDimensions(w, height), 100, 4000)
   const hScrub = useScrub(height, (h) => setDimensions(width, h), 100, 4000)
   const { containerRef, scale, setScale, resetToFit, isManualScale, displayWidth, displayHeight } = useCanvasFit(width, height)
   const { handleMouseDown } = useCanvasResize(scale, setIsResizing)
   const zoomPct = Math.round(scale * 100)
-
-  const noiseOn = noiseIntensity > 0
-  const toggleNoise = () => {
-    if (noiseOn) {
-      prevNoiseRef.current = noiseIntensity
-      setNoiseIntensity(0)
-    } else {
-      setNoiseIntensity(prevNoiseRef.current)
-    }
-  }
 
   const [exportOpen, setExportOpen] = useState(false)
 
@@ -745,11 +841,11 @@ export function PreviewArea() {
             >
               <div className="flex items-end justify-between px-10 pt-10 pb-8 border-b border-white/[0.06]">
                 <div className="flex flex-col gap-1.5">
-                  <h2 className="text-[52px] font-black uppercase tracking-tighter text-white leading-none">
+                  <h2 className="text-[52px] font-black tracking-tighter text-white leading-none">
                     Download
                   </h2>
                   <span className="text-sm text-white/30 capitalize font-mono">
-                    {theme} &middot; {triptych ? `${TRIPTYCH_PANEL_W} × ${TRIPTYCH_PANEL_H} per panel` : `${width} × ${height}`}
+                    {theme} &middot; {triptych ? `${TRIPTYCH_PANEL_W} × ${TRIPTYCH_PANEL_H} per panel` : livecard ? `${LIVECARD_COVE_W} × ${LIVECARD_COVE_H} per cove` : `${width} × ${height}`}
                   </span>
                 </div>
                 <button
@@ -760,7 +856,7 @@ export function PreviewArea() {
                 </button>
               </div>
               <div className="px-10 py-9">
-                <ExportPanel isTriptych={triptych} />
+                <ExportPanel isTriptych={triptych} isLivecard={livecard} />
               </div>
             </div>
           </div>
@@ -773,18 +869,6 @@ export function PreviewArea() {
         <div className="flex flex-col items-center gap-2 mr-6">
           <LogoToggle />
           <GuidesToggle />
-          <button
-            onClick={toggleNoise}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-              noiseOn ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60 hover:bg-white/5'
-            }`}
-            title={noiseOn ? 'Noise on — click to disable' : 'Noise off — click to enable'}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M3 7h2m3 0h2m3 0h2m3 0h2M3 12h2m3 0h2m3 0h2m3 0h2M3 17h2m3 0h2m3 0h2m3 0h2" strokeLinecap="round"/>
-            </svg>
-            <span className="text-[10px] uppercase tracking-wide">Noise</span>
-          </button>
         </div>
 
         {/* Center column: dimensions above, canvas, themes below */}
@@ -807,6 +891,46 @@ export function PreviewArea() {
                 </div>
                 <span className="text-[10px] text-white/25 -mt-0.5">1080 per panel</span>
                 <div className="relative flex items-center justify-center" style={{ width: displayWidth }}>
+                  <button
+                    onClick={() => setDimensions(1080, 1920)}
+                    className="absolute left-0 flex items-center gap-1 text-[10px] text-white/30 hover:text-white/70 transition-colors"
+                    title="Exit triptych"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M1 1l8 8M9 1l-8 8" />
+                    </svg>
+                    triptych
+                  </button>
+                  <PresetDropdown />
+                  {zoomControls}
+                </div>
+              </>
+            ) : livecard ? (
+              <>
+                {/* Livecard MAX: static display with cove annotation */}
+                <div className="flex items-end gap-3">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] uppercase tracking-widest text-white/20 select-none">W</span>
+                    <span className="w-28 text-3xl font-light text-white/70 opacity-80 text-center font-mono">{LIVECARD_TOTAL_W}</span>
+                  </div>
+                  <span className="text-2xl text-white/15 pb-1">×</span>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] uppercase tracking-widest text-white/20 select-none">H</span>
+                    <span className="w-24 text-3xl font-light text-white/70 opacity-80 text-center font-mono">{LIVECARD_COVE_H}</span>
+                  </div>
+                </div>
+                <span className="text-[10px] text-white/25 -mt-0.5">1920×360 per cove · 1920×1920 squares</span>
+                <div className="relative flex items-center justify-center" style={{ width: displayWidth }}>
+                  <button
+                    onClick={() => setDimensions(1080, 1920)}
+                    className="absolute left-0 flex items-center gap-1 text-[10px] text-white/30 hover:text-white/70 transition-colors"
+                    title="Exit Livecard MAX"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M1 1l8 8M9 1l-8 8" />
+                    </svg>
+                    livecard
+                  </button>
                   <PresetDropdown />
                   {zoomControls}
                 </div>
@@ -871,7 +995,7 @@ export function PreviewArea() {
           >
             <AtmosphereSvg scale={scale} displayWidth={displayWidth} displayHeight={displayHeight} />
 
-            {!triptych && (
+            {!triptych && !livecard && (
               <div className={`transition-opacity ${isResizing ? 'opacity-100' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'}`}>
                 <ResizeHandle position="n" onMouseDown={handleMouseDown('n')} />
                 <ResizeHandle position="s" onMouseDown={handleMouseDown('s')} />
