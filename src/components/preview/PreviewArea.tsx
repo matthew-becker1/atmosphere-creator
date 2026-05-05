@@ -9,7 +9,7 @@ import { PRESETS } from '../../constants/presets'
 import { TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, TRIPTYCH_TOTAL_W, TRIPTYCH_PANELS } from '../../constants/triptych'
 import { LIVECARD_COVES, LIVECARD_COVE_W, LIVECARD_COVE_H, LIVECARD_SQUARES, LIVECARD_SQUARE_SIZE, LIVECARD_TOTAL_W } from '../../constants/livecard'
 import { buildSvgString, buildLivecardSquareSvg } from '../../lib/svgBuilder'
-import { exportSvg, exportPng, exportWebp, exportJpg, exportTriptychPanel } from '../../lib/exportPng'
+import { exportSvg, exportPng, exportWebp, exportJpg, downloadZip, svgFileEntry, imageFileEntry, cropImageFileEntry } from '../../lib/exportPng'
 import type { ImageFormat } from '../../lib/exportPng'
 import type { ThemeName } from '../../types'
 
@@ -166,63 +166,61 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
   const handleExport = async () => {
     const state = useStore.getState()
     const suffix = !isSvg && rasterScale === 2 ? '@2x' : ''
+    const fmt = format as ImageFormat
+
     if (isSvg) {
       if (isTriptych) {
-        for (let i = 0; i < TRIPTYCH_PANELS.length; i++) {
+        const files = TRIPTYCH_PANELS.map((panel, i) => {
           setBatchProgress(i + 1)
-          const panel = TRIPTYCH_PANELS[i]
           const svg = buildSvgString(state, { x: panel.x, w: TRIPTYCH_PANEL_W, h: TRIPTYCH_PANEL_H })
-          exportSvg(svg, `atmosphere-triptych-${state.theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}.svg`)
-          await new Promise((r) => setTimeout(r, 80))
-        }
+          return svgFileEntry(svg, `atmosphere-triptych-${state.theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}.svg`)
+        })
         setBatchProgress(null)
+        downloadZip(files, `atmosphere-triptych-${state.theme}.zip`)
       } else if (isLivecard) {
-        let idx = 0
-        for (const cove of LIVECARD_COVES) {
-          setBatchProgress(++idx)
-          const cx = cove.x + LIVECARD_COVE_W / 2
-          const svg = buildSvgString(state, { x: cove.x, w: LIVECARD_COVE_W, h: LIVECARD_COVE_H }, { centerX: cx, refW: LIVECARD_COVE_W })
-          exportSvg(svg, `atmosphere-livecard-${state.theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}.svg`)
-          await new Promise((r) => setTimeout(r, 80))
-        }
-        for (const sq of LIVECARD_SQUARES) {
-          setBatchProgress(++idx)
-          exportSvg(buildLivecardSquareSvg(state), `atmosphere-livecard-${state.theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}.svg`)
-          await new Promise((r) => setTimeout(r, 80))
-        }
-        setBatchProgress(null)
+        const files = [
+          ...LIVECARD_COVES.map((cove) => {
+            const cx = cove.x + LIVECARD_COVE_W / 2
+            const svg = buildSvgString(state, { x: cove.x, w: LIVECARD_COVE_W, h: LIVECARD_COVE_H }, { centerX: cx, refW: LIVECARD_COVE_W })
+            return svgFileEntry(svg, `atmosphere-livecard-${state.theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}.svg`)
+          }),
+          ...LIVECARD_SQUARES.map((sq) =>
+            svgFileEntry(buildLivecardSquareSvg(state), `atmosphere-livecard-${state.theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}.svg`)
+          ),
+        ]
+        downloadZip(files, `atmosphere-livecard-${state.theme}.zip`)
       } else {
         exportSvg(buildSvgString(state), `atmosphere-${state.theme}-${state.width}x${state.height}.svg`)
       }
       setShowNoisePopup(true)
     } else {
-      const fmt = format as ImageFormat
       if (isTriptych) {
         const fullSvg = buildSvgString(state)
+        const files: { name: string; data: Uint8Array }[] = []
         for (let i = 0; i < TRIPTYCH_PANELS.length; i++) {
           setBatchProgress(i + 1)
           const panel = TRIPTYCH_PANELS[i]
           const fn = `atmosphere-triptych-${state.theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}${suffix}.${fmt}`
-          await exportTriptychPanel(fullSvg, panel.x, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, fn, fmt, rasterScale)
+          files.push(await cropImageFileEntry(fullSvg, panel.x, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, fn, fmt, rasterScale))
         }
         setBatchProgress(null)
+        downloadZip(files, `atmosphere-triptych-${state.theme}${suffix}.zip`)
       } else if (isLivecard) {
         const fullSvg = buildSvgString(state)
+        const files: { name: string; data: Uint8Array }[] = []
         let idx = 0
         for (const cove of LIVECARD_COVES) {
           setBatchProgress(++idx)
           const fn = `atmosphere-livecard-${state.theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}${suffix}.${fmt}`
-          await exportTriptychPanel(fullSvg, cove.x, LIVECARD_TOTAL_W, LIVECARD_COVE_W, LIVECARD_COVE_H, fn, fmt, rasterScale)
+          files.push(await cropImageFileEntry(fullSvg, cove.x, LIVECARD_TOTAL_W, LIVECARD_COVE_W, LIVECARD_COVE_H, fn, fmt, rasterScale))
         }
         for (const sq of LIVECARD_SQUARES) {
           setBatchProgress(++idx)
-          const sqSvg = buildLivecardSquareSvg(state)
           const fn = `atmosphere-livecard-${state.theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}${suffix}.${fmt}`
-          if (fmt === 'png') await exportPng(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
-          else if (fmt === 'webp') await exportWebp(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
-          else await exportJpg(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
+          files.push(await imageFileEntry(buildLivecardSquareSvg(state), LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, fmt, rasterScale))
         }
         setBatchProgress(null)
+        downloadZip(files, `atmosphere-livecard-${state.theme}${suffix}.zip`)
       } else {
         const svg = buildSvgString(state)
         const fn = `atmosphere-${state.theme}-${state.width}x${state.height}${suffix}.${fmt}`
@@ -236,61 +234,82 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
   const handleBatchExport = async () => {
     const { width, height } = useStore.getState()
     const suffix = !isSvg && rasterScale === 2 ? '@2x' : ''
+    const fmt = format as ImageFormat
     let count = 0
-    for (const theme of THEME_NAMES) {
-      const state = stateForTheme(theme)
-      if (isSvg) {
-        if (isTriptych) {
-          for (const panel of TRIPTYCH_PANELS) {
+
+    if (isSvg) {
+      if (isTriptych) {
+        for (const theme of THEME_NAMES) {
+          const state = stateForTheme(theme)
+          const files = TRIPTYCH_PANELS.map((panel) => {
             count++; setBatchProgress(count)
             const svg = buildSvgString(state, { x: panel.x, w: TRIPTYCH_PANEL_W, h: TRIPTYCH_PANEL_H })
-            exportSvg(svg, `atmosphere-triptych-${theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}.svg`)
-            await new Promise((r) => setTimeout(r, 80))
-          }
-        } else if (isLivecard) {
-          for (const cove of LIVECARD_COVES) {
-            count++; setBatchProgress(count)
-            const cx = cove.x + LIVECARD_COVE_W / 2
-            const svg = buildSvgString(state, { x: cove.x, w: LIVECARD_COVE_W, h: LIVECARD_COVE_H }, { centerX: cx, refW: LIVECARD_COVE_W })
-            exportSvg(svg, `atmosphere-livecard-${theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}.svg`)
-            await new Promise((r) => setTimeout(r, 80))
-          }
-          for (const sq of LIVECARD_SQUARES) {
-            count++; setBatchProgress(count)
-            exportSvg(buildLivecardSquareSvg(state), `atmosphere-livecard-${theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}.svg`)
-            await new Promise((r) => setTimeout(r, 80))
-          }
-        } else {
-          count++; setBatchProgress(count)
-          exportSvg(buildSvgString(state), `atmosphere-${theme}-${width}x${height}.svg`)
+            return svgFileEntry(svg, `atmosphere-triptych-${theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}.svg`)
+          })
+          downloadZip(files, `atmosphere-triptych-${theme}.zip`)
+          await new Promise((r) => setTimeout(r, 80))
+        }
+      } else if (isLivecard) {
+        for (const theme of THEME_NAMES) {
+          const state = stateForTheme(theme)
+          const files = [
+            ...LIVECARD_COVES.map((cove) => {
+              count++; setBatchProgress(count)
+              const cx = cove.x + LIVECARD_COVE_W / 2
+              const svg = buildSvgString(state, { x: cove.x, w: LIVECARD_COVE_W, h: LIVECARD_COVE_H }, { centerX: cx, refW: LIVECARD_COVE_W })
+              return svgFileEntry(svg, `atmosphere-livecard-${theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}.svg`)
+            }),
+            ...LIVECARD_SQUARES.map((sq) => {
+              count++; setBatchProgress(count)
+              return svgFileEntry(buildLivecardSquareSvg(state), `atmosphere-livecard-${theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}.svg`)
+            }),
+          ]
+          downloadZip(files, `atmosphere-livecard-${theme}.zip`)
           await new Promise((r) => setTimeout(r, 80))
         }
       } else {
-        const fmt = format as ImageFormat
-        if (isTriptych) {
+        for (const theme of THEME_NAMES) {
+          count++; setBatchProgress(count)
+          const state = stateForTheme(theme)
+          exportSvg(buildSvgString(state), `atmosphere-${theme}-${width}x${height}.svg`)
+          await new Promise((r) => setTimeout(r, 80))
+        }
+      }
+      setShowNoisePopup(true)
+    } else {
+      if (isTriptych) {
+        for (const theme of THEME_NAMES) {
+          const state = stateForTheme(theme)
           const fullSvg = buildSvgString(state)
+          const files: { name: string; data: Uint8Array }[] = []
           for (const panel of TRIPTYCH_PANELS) {
             count++; setBatchProgress(count)
             const fn = `atmosphere-triptych-${theme}-${panel.label}-${TRIPTYCH_PANEL_W}x${TRIPTYCH_PANEL_H}${suffix}.${fmt}`
-            await exportTriptychPanel(fullSvg, panel.x, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, fn, fmt, rasterScale)
+            files.push(await cropImageFileEntry(fullSvg, panel.x, TRIPTYCH_TOTAL_W, TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, fn, fmt, rasterScale))
           }
-        } else if (isLivecard) {
+          downloadZip(files, `atmosphere-triptych-${theme}${suffix}.zip`)
+        }
+      } else if (isLivecard) {
+        for (const theme of THEME_NAMES) {
+          const state = stateForTheme(theme)
           const fullSvg = buildSvgString(state)
+          const files: { name: string; data: Uint8Array }[] = []
           for (const cove of LIVECARD_COVES) {
             count++; setBatchProgress(count)
             const fn = `atmosphere-livecard-${theme}-cove-${cove.label}-${LIVECARD_COVE_W}x${LIVECARD_COVE_H}${suffix}.${fmt}`
-            await exportTriptychPanel(fullSvg, cove.x, LIVECARD_TOTAL_W, LIVECARD_COVE_W, LIVECARD_COVE_H, fn, fmt, rasterScale)
+            files.push(await cropImageFileEntry(fullSvg, cove.x, LIVECARD_TOTAL_W, LIVECARD_COVE_W, LIVECARD_COVE_H, fn, fmt, rasterScale))
           }
           for (const sq of LIVECARD_SQUARES) {
             count++; setBatchProgress(count)
-            const sqSvg = buildLivecardSquareSvg(state)
             const fn = `atmosphere-livecard-${theme}-${sq.label}-${LIVECARD_SQUARE_SIZE}x${LIVECARD_SQUARE_SIZE}${suffix}.${fmt}`
-            if (fmt === 'png') await exportPng(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
-            else if (fmt === 'webp') await exportWebp(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
-            else await exportJpg(sqSvg, LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, rasterScale)
+            files.push(await imageFileEntry(buildLivecardSquareSvg(state), LIVECARD_SQUARE_SIZE, LIVECARD_SQUARE_SIZE, fn, fmt, rasterScale))
           }
-        } else {
+          downloadZip(files, `atmosphere-livecard-${theme}${suffix}.zip`)
+        }
+      } else {
+        for (const theme of THEME_NAMES) {
           count++; setBatchProgress(count)
+          const state = stateForTheme(theme)
           const svg = buildSvgString(state)
           const fn = `atmosphere-${theme}-${width}x${height}${suffix}.${fmt}`
           if (fmt === 'png') await exportPng(svg, width, height, fn, rasterScale)
@@ -300,7 +319,6 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
       }
     }
     setBatchProgress(null)
-    if (isSvg) setShowNoisePopup(true)
   }
 
   const copyNoise = () => {
