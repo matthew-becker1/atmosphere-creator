@@ -551,7 +551,7 @@ function PresetDropdown() {
       className="appearance-none bg-transparent text-xs text-white/50 hover:text-white/80
         outline-none cursor-pointer transition-colors px-1 py-0 text-center"
     >
-      {!activePreset && !triptych && !livecard && <option value="" className="bg-neutral-900">Preset</option>}
+      {!activePreset && !triptych && !livecard && <option value="" className="bg-neutral-900">{width} × {height}</option>}
       {PRESETS.map((p) => (
         <option key={p.label} value={`${p.width}x${p.height}`} className="bg-neutral-900">
           {p.label}
@@ -602,6 +602,19 @@ function GuidesToggle() {
       </svg>
       <span className="text-[10px] uppercase tracking-wide">Guides</span>
     </button>
+  )
+}
+
+function GooeyFilter() {
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }}>
+      <defs>
+        <filter id="scrubber-gooey" x="-50%" y="-200%" width="200%" height="500%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+          <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" />
+        </filter>
+      </defs>
+    </svg>
   )
 }
 
@@ -675,16 +688,6 @@ function ThemeScrubber({ width }: { width: number }) {
 
   return (
     <div style={{ width: trackWidth }}>
-      {/* SVG gooey filter: blur then high-contrast alpha threshold */}
-      <svg width="0" height="0" style={{ position: 'absolute' }}>
-        <defs>
-          <filter id="scrubber-gooey" x="-50%" y="-200%" width="200%" height="500%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-            <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" />
-          </filter>
-        </defs>
-      </svg>
-
       <div
         ref={trackRef}
         className="relative py-6 cursor-grab active:cursor-grabbing select-none"
@@ -741,7 +744,7 @@ function ThemeScrubber({ width }: { width: number }) {
             <button
               key={name}
               onClick={() => setThemePosition(i)}
-              className={`absolute -translate-x-1/2 text-[11px] tracking-widest transition-colors whitespace-nowrap ${
+              className={`absolute -translate-x-1/2 text-xs tracking-wide transition-colors whitespace-nowrap ${
                 isActive ? 'text-white/70 underline underline-offset-2' : 'text-white/30 hover:text-white/55'
               }`}
               style={{ left: `${(i / (THEME_NAMES.length - 1)) * 100}%` }}
@@ -759,16 +762,46 @@ function BackgroundToggle() {
   const darkBackground = useStore((s) => s.darkBackground)
   const toggleBackground = useStore((s) => s.toggleBackground)
 
+  const TRACK_W = 56
+  const DOT_D = 12
+  const THUMB_D = 22
+  const dotXL = THUMB_D / 2
+  const dotXR = TRACK_W - THUMB_D / 2
+  const thumbX = darkBackground ? dotXL : dotXR
+
   return (
     <button
       onClick={toggleBackground}
-      className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors"
+      className="flex flex-col items-center gap-1"
+      title={darkBackground ? 'Switch to light background' : 'Switch to dark background'}
     >
-      <div
-        className="w-3 h-3 rounded-full border border-white/20"
-        style={{ backgroundColor: darkBackground ? '#000000' : '#ffffff' }}
-      />
-      <span className="text-[10px] text-white/50">{darkBackground ? 'Dark' : 'Light'}</span>
+      <div className="relative" style={{ width: TRACK_W, height: THUMB_D + 8 }}>
+        {/* Gradient track */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-px rounded-full"
+          style={{ background: 'linear-gradient(to right, #444, #ccc)' }}
+        />
+        {/* Gooey layer — reuses the scrubber-gooey filter */}
+        <div className="absolute inset-0 pointer-events-none" style={{ filter: 'url(#scrubber-gooey)' }}>
+          <div className="absolute rounded-full" style={{
+            left: dotXL, top: '50%', width: DOT_D, height: DOT_D,
+            transform: 'translate(-50%, -50%)', backgroundColor: '#444',
+          }} />
+          <div className="absolute rounded-full" style={{
+            left: dotXR, top: '50%', width: DOT_D, height: DOT_D,
+            transform: 'translate(-50%, -50%)', backgroundColor: '#ccc',
+          }} />
+          <div className="absolute rounded-full" style={{
+            left: thumbX, top: '50%', width: THUMB_D, height: THUMB_D,
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: darkBackground ? '#444' : '#ccc',
+            transition: 'left 0.3s cubic-bezier(0.22, 1.8, 0.36, 1)',
+          }} />
+        </div>
+      </div>
+      <span className="text-[9px] uppercase tracking-widest text-white/30">
+        {darkBackground ? 'Dark' : 'Light'}
+      </span>
     </button>
   )
 }
@@ -845,6 +878,7 @@ export function PreviewArea() {
 
   return (
     <div className="flex-1 relative flex flex-col min-h-0" style={{ backgroundColor: '#1d0029' }}>
+      <GooeyFilter />
       {/* Download modal */}
       {exportOpen && (
         <div
@@ -990,7 +1024,7 @@ export function PreviewArea() {
                         className="w-24 text-3xl font-light text-white/70 opacity-80"
                         title="Height"
                       />
-                      <span className="text-[9px] text-white/20 font-mono leading-none">{zoomPct}%</span>
+                      <span className="text-xs text-white/25 font-mono leading-none">{zoomPct}%</span>
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 
 function computeFitScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number) {
-  const paddingX = 120  // logo + guides toggles flanking the canvas
+  const paddingX = 160  // logo + guides toggles flanking the canvas
   const paddingY = 260  // dimension pill + theme row (~100px) + ~80px margin each side
   const availableW = containerWidth - paddingX
   const availableH = containerHeight - paddingY
