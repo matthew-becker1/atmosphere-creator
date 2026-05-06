@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 
-function computeFitScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number) {
-  const paddingX = 160  // logo + guides toggles flanking the canvas
-  const paddingY = 260  // dimension pill + theme row (~100px) + ~80px margin each side
+function computeFitScale(containerWidth: number, containerHeight: number, canvasWidth: number, canvasHeight: number, paddingX = 160, paddingY = 260) {
   const availableW = containerWidth - paddingX
   const availableH = containerHeight - paddingY
   if (availableW <= 0 || availableH <= 0) return 0.1
   return Math.min(1, availableW / canvasWidth, availableH / canvasHeight)
 }
 
-export function useCanvasFit(width: number, height: number) {
+export function useCanvasFit(width: number, height: number, paddingX = 160, paddingY = 260) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [fitScale, setFitScale] = useState(0.5)
   const [manualScale, setManualScale] = useState<number | null>(null)
@@ -19,8 +17,8 @@ export function useCanvasFit(width: number, height: number) {
   const scale = manualScale !== null ? Math.min(manualScale, fitScale) : fitScale
 
   const computeAndSetFit = useCallback((containerW: number, containerH: number) => {
-    setFitScale(computeFitScale(containerW, containerH, width, height))
-  }, [width, height])
+    setFitScale(computeFitScale(containerW, containerH, width, height, paddingX, paddingY))
+  }, [width, height, paddingX, paddingY])
 
   useLayoutEffect(() => {
     const el = containerRef.current

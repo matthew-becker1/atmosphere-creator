@@ -12,6 +12,6 @@ export const LIVECARD_COVES = Array.from({ length: LIVECARD_COVE_COUNT }, (_, i)
 }))
 
 export const LIVECARD_SQUARES = [
-  { label: 'square-001' },
-  { label: 'square-002' },
+  { label: 'square-001', x: 0 },
+  { label: 'square-002', x: LIVECARD_TOTAL_W - LIVECARD_SQUARE_SIZE },
 ]

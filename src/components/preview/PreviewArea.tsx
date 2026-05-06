@@ -3,7 +3,7 @@ import { useStore } from '../../store/useStore'
 import { useCanvasFit } from '../../hooks/useCanvasFit'
 import { useCanvasResize } from '../../hooks/useCanvasResize'
 import { useScrub } from '../../hooks/useScrub'
-import { AtmosphereSvg } from './AtmosphereSvg'
+import { AtmosphereSvg, LivecardSquarePreview } from './AtmosphereSvg'
 import { THEMES, THEME_NAMES } from '../../constants/themes'
 import { PRESETS } from '../../constants/presets'
 import { TRIPTYCH_PANEL_W, TRIPTYCH_PANEL_H, TRIPTYCH_TOTAL_W, TRIPTYCH_PANELS } from '../../constants/triptych'
@@ -36,13 +36,13 @@ function SegmentedControl<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="flex bg-white/[0.04] rounded-lg overflow-hidden divide-x divide-white/[0.06] border border-white/[0.06]">
+    <div className="flex bg-black/[0.06] rounded-lg overflow-hidden divide-x divide-black/[0.08] border border-black/[0.08]">
       {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
           className={`flex-1 py-1.5 text-xs transition-colors ${
-            value === opt.value ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/70'
+            value === opt.value ? 'bg-[#1d0029] text-white' : 'text-black/50 hover:text-black/80'
           }`}
         >
           {opt.label}
@@ -339,7 +339,7 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
       <div className="flex flex-col gap-8">
         {/* 1 — Format tiles with embedded size */}
         <div className="flex flex-col gap-3">
-          <span className="text-[10px] uppercase tracking-widest text-white/30">Format</span>
+          <span className="text-[10px] uppercase tracking-widest text-black/35">Format</span>
           <div className="grid grid-cols-4 gap-2">
             {ALL_FORMATS.map((fmt) => (
               <button
@@ -347,8 +347,8 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
                 onClick={() => setFormat(fmt)}
                 className={`flex flex-col items-start gap-2 p-3 rounded-xl transition-colors ${
                   format === fmt
-                    ? 'bg-white/15 text-white'
-                    : 'bg-white/[0.04] text-white/40 hover:bg-white/[0.08] hover:text-white/60'
+                    ? 'bg-[#1d0029] text-white'
+                    : 'bg-black/[0.06] text-black/50 hover:bg-black/[0.11] hover:text-black/80'
                 }`}
               >
                 <span className="text-sm font-bold uppercase tracking-wide leading-none">{fmt}</span>
@@ -361,7 +361,7 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
         {/* 2 — Scale (raster only) */}
         {!isSvg && (
           <div className="flex flex-col gap-3">
-            <span className="text-[10px] uppercase tracking-widest text-white/30">Scale</span>
+            <span className="text-[10px] uppercase tracking-widest text-black/35">Scale</span>
             <SegmentedControl<'1' | '2'>
               options={[{ label: '1×', value: '1' }, { label: '2×', value: '2' }]}
               value={String(rasterScale) as '1' | '2'}
@@ -373,19 +373,19 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
         {/* 3 — Noise */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-widest text-white/30">Noise</span>
+            <span className="text-[10px] uppercase tracking-widest text-black/35">Noise</span>
             {isSvg && noiseOn && (
-              <span className="text-[10px] text-white/25">Add manually in Figma</span>
+              <span className="text-[10px] text-black/30">Add manually in Figma</span>
             )}
           </div>
           <button
             onClick={toggleNoise}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
-              noiseOn ? 'bg-white/15 text-white' : 'bg-white/[0.04] text-white/35 hover:bg-white/[0.08] hover:text-white/60'
+              noiseOn ? 'bg-[#1d0029] text-white' : 'bg-black/[0.06] text-black/50 hover:bg-black/[0.11] hover:text-black/80'
             }`}
           >
-            <span className={`w-5 h-3 rounded-full relative transition-colors ${noiseOn ? 'bg-white/60' : 'bg-white/15'}`}>
-              <span className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${noiseOn ? 'left-2.5' : 'left-0.5'}`} />
+            <span className={`w-5 h-3 rounded-full relative transition-colors ${noiseOn ? 'bg-white/30' : 'bg-black/20'}`}>
+              <span className={`absolute top-0.5 w-2 h-2 rounded-full transition-all ${noiseOn ? 'bg-white left-2.5' : 'bg-white/80 left-0.5'}`} />
             </span>
             {noiseOn ? 'On' : 'Off'}
           </button>
@@ -393,8 +393,8 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
 
         {/* 4 — Filename */}
         <div className="flex flex-col gap-2">
-          <span className="text-[10px] uppercase tracking-widest text-white/30">File</span>
-          <span className="text-xs font-mono text-white/25 break-all leading-relaxed">{filenamePreview}</span>
+          <span className="text-[10px] uppercase tracking-widest text-black/35">File</span>
+          <span className="text-xs font-mono text-black/35 break-all leading-relaxed">{filenamePreview}</span>
         </div>
 
         {/* 4 — Download */}
@@ -402,19 +402,19 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
           <button
             onClick={handleExport}
             disabled={isBusy}
-            className="w-full py-5 px-6 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] transition-colors disabled:opacity-40 flex flex-col items-start gap-0.5"
+            className="w-full py-5 px-6 rounded-2xl bg-[#1d0029] hover:bg-[#2a003d] transition-colors disabled:opacity-40 flex flex-col items-center gap-0.5"
           >
             <span className="text-2xl font-black tracking-tight text-white leading-none">
               {isBusy ? `${batchProgress} of ${isTriptych ? TRIPTYCH_PANELS.length : isLivecard ? livecardFilesPerTheme : 1}…` : 'Download'}
             </span>
-            <span className="text-xs text-white/40">
-              {theme} theme{isTriptych ? ' · 3 panels' : isLivecard ? ' · 5 coves + 2 squares' : ''}
+            <span className="text-xs text-white/50">
+              {theme[0].toUpperCase() + theme.slice(1)} theme{isTriptych ? ' · 3 panels' : isLivecard ? ' · 5 coves + 2 squares' : ''}
             </span>
           </button>
           <button
             onClick={handleBatchExport}
             disabled={isBusy}
-            className="w-full py-3 rounded-2xl text-xs text-white/35 bg-white/[0.03] hover:bg-white/[0.07] hover:text-white/60 transition-colors disabled:opacity-40"
+            className="w-full py-3 rounded-2xl text-xs text-black/50 bg-black/[0.06] hover:bg-black/[0.11] hover:text-black/75 transition-colors disabled:opacity-40"
           >
             {batchLabel}
           </button>
@@ -536,30 +536,46 @@ function PresetDropdown() {
       setTriptych(true)
     } else if (val === 'livecard') {
       setLivecard(true)
-    } else if (val !== '') {
+    } else if (val === 'custom') {
+      // no-op — user types custom dims via W/H inputs
+    } else {
       const [w, h] = val.split('x').map(Number)
       setDimensions(w, h)
     }
   }
 
-  const currentValue = triptych ? 'triptych' : livecard ? 'livecard' : activePreset ? `${width}x${height}` : ''
+  const currentValue = triptych ? 'triptych' : livecard ? 'livecard' : activePreset ? `${width}x${height}` : 'custom'
 
   return (
-    <select
-      value={currentValue}
-      onChange={handleChange}
-      className="appearance-none bg-transparent text-xs text-white/50 hover:text-white/80
-        outline-none cursor-pointer transition-colors px-1 py-0 text-center"
-    >
-      {!activePreset && !triptych && !livecard && <option value="" className="bg-neutral-900">{width} × {height}</option>}
-      {PRESETS.map((p) => (
-        <option key={p.label} value={`${p.width}x${p.height}`} className="bg-neutral-900">
-          {p.label}
-        </option>
-      ))}
-      <option value="triptych" className="bg-neutral-900">Triptych (3 × 1080)</option>
-      <option value="livecard" className="bg-neutral-900">Livecard MAX (5 coves + 2 sq)</option>
-    </select>
+    <div className="relative inline-flex items-center">
+      <select
+        value={currentValue}
+        onChange={handleChange}
+        className="appearance-none bg-white/[0.06] border border-white/10 rounded-full
+          text-[10px] uppercase tracking-widest text-white/50
+          hover:bg-white/[0.10] hover:border-white/20 hover:text-white/80
+          outline-none cursor-pointer transition-all
+          pl-4 pr-8 py-1.5 text-center"
+      >
+        <optgroup label="── Presets ──" className="bg-neutral-900">
+          {PRESETS.map((p) => (
+            <option key={p.label} value={`${p.width}x${p.height}`} className="bg-neutral-900 normal-case tracking-normal">
+              {p.label}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="── Multi-panel ──" className="bg-neutral-900">
+          <option value="triptych" className="bg-neutral-900 normal-case tracking-normal">Triptych  ·  3 × 1080</option>
+          <option value="livecard" className="bg-neutral-900 normal-case tracking-normal">Livecard MAX  ·  5 coves + 2 sq</option>
+        </optgroup>
+        <optgroup label="──────────────" className="bg-neutral-900">
+          <option value="custom" className="bg-neutral-900 normal-case tracking-normal">Custom</option>
+        </optgroup>
+      </select>
+      <svg className="pointer-events-none absolute right-2.5 w-2.5 h-2.5 text-white/30" viewBox="0 0 12 12" fill="none">
+        <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
   )
 }
 
@@ -711,8 +727,8 @@ function ThemeScrubber({ width }: { width: number }) {
               style={{
                 top: '50%',
                 left: `${(i / (THEME_NAMES.length - 1)) * 100}%`,
-                width: 13,
-                height: 13,
+                width: 17,
+                height: 17,
                 transform: 'translate(-50%, -50%)',
                 backgroundColor: THEMES[name].main,
               }}
@@ -736,24 +752,28 @@ function ThemeScrubber({ width }: { width: number }) {
         </div>
       </div>
 
-      {/* Labels — centered under each stop dot */}
-      <div className="relative h-5">
-        {THEME_NAMES.map((name, i) => {
-          const isActive = Math.round(themePosition) === i
-          return (
-            <button
-              key={name}
-              onClick={() => setThemePosition(i)}
-              className={`absolute -translate-x-1/2 text-xs tracking-wide transition-colors whitespace-nowrap ${
-                isActive ? 'text-white/70 underline underline-offset-2' : 'text-white/30 hover:text-white/55'
-              }`}
-              style={{ left: `${(i / (THEME_NAMES.length - 1)) * 100}%` }}
-            >
-              {name[0].toUpperCase() + name.slice(1)}
-            </button>
-          )
-        })}
-      </div>
+      {/* Labels — removed below 400px so BackgroundToggle fills the gap */}
+      {width >= 400 && (
+        <div className="relative h-6">
+          {THEME_NAMES.map((name, i) => {
+            const isActive = Math.round(themePosition) === i
+            return (
+              <button
+                key={name}
+                onClick={() => setThemePosition(i)}
+                className={`absolute -translate-x-1/2 text-xs tracking-wide transition-colors whitespace-nowrap px-2 py-0.5 rounded-full border ${
+                  isActive
+                    ? 'border-white/50 text-white/80'
+                    : 'border-white/15 text-white/30 hover:border-white/35 hover:text-white/55'
+                }`}
+                style={{ left: `${(i / (THEME_NAMES.length - 1)) * 100}%` }}
+              >
+                {name[0].toUpperCase() + name.slice(1)}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -772,9 +792,10 @@ function BackgroundToggle() {
   return (
     <button
       onClick={toggleBackground}
-      className="flex flex-col items-center gap-1"
-      title={darkBackground ? 'Switch to light background' : 'Switch to dark background'}
+      className="flex items-center gap-2"
+      title={darkBackground ? 'Switch to airy background' : 'Switch to dense background'}
     >
+      <span className={`text-[9px] uppercase tracking-widest transition-colors ${darkBackground ? 'text-white/50' : 'text-white/20'}`}>Dense</span>
       <div className="relative" style={{ width: TRACK_W, height: THUMB_D + 8 }}>
         {/* Gradient track */}
         <div
@@ -799,9 +820,7 @@ function BackgroundToggle() {
           }} />
         </div>
       </div>
-      <span className="text-[9px] uppercase tracking-widest text-white/30">
-        {darkBackground ? 'Dark' : 'Light'}
-      </span>
+      <span className={`text-[9px] uppercase tracking-widest transition-colors ${!darkBackground ? 'text-white/50' : 'text-white/20'}`}>Airy</span>
     </button>
   )
 }
@@ -843,28 +862,108 @@ function ResizeHandle({
   )
 }
 
+// --- Download Modal ---
+
+function DownloadModal({ onClose }: { onClose: () => void }) {
+  const { width, height, triptych, livecard } = useStore((s) => ({
+    width: s.width, height: s.height, triptych: s.triptych, livecard: s.livecard,
+  }))
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const THUMB_W = 220
+  const THUMB_H = 150
+
+  const thumbCanvasW = triptych ? TRIPTYCH_TOTAL_W : width
+  const thumbCanvasH = triptych ? TRIPTYCH_PANEL_H : height
+  const thumbScale = Math.min(THUMB_W / thumbCanvasW, THUMB_H / thumbCanvasH)
+  const thumbDisplayW = Math.round(thumbCanvasW * thumbScale)
+  const thumbDisplayH = Math.round(thumbCanvasH * thumbScale)
+  const squareThumbScale = Math.min(THUMB_W, THUMB_H) / LIVECARD_SQUARE_SIZE
+
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col" style={{ backgroundColor: '#fafafc' }}>
+      {/* Header */}
+      <div className="flex items-center px-8 py-4 border-b border-black/[0.07] shrink-0">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 text-sm text-black/40 hover:text-black transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 3L5 8l5 5" />
+          </svg>
+          Back to generator
+        </button>
+      </div>
+
+      {/* Download heading — spans full width so columns start at same height */}
+      <div className="px-12 py-6 border-b border-black/[0.07] shrink-0">
+        <h2 className="text-[44px] font-black tracking-tighter text-black leading-none">Download</h2>
+      </div>
+
+      {/* Body — 1/3 controls + 2/3 preview */}
+      <div className="flex-1 flex min-h-0">
+        {/* Controls — scrollable, 1/3 */}
+        <div className="flex-[1] overflow-y-auto px-10 py-10">
+          <ExportPanel isTriptych={triptych} isLivecard={livecard} />
+        </div>
+
+        {/* Preview — full-height gray panel, 2/3 */}
+        <div
+          className="flex-[2] flex flex-col border-l border-black/[0.07]"
+          style={{ backgroundColor: 'rgba(0,0,0,0.05)' }}
+        >
+          <div className="px-10 pt-10 pb-6 shrink-0">
+            <span className="text-[10px] uppercase tracking-widest text-black/40">Preview</span>
+          </div>
+          <div
+            className="flex-1 flex items-start justify-center px-10"
+            style={{ pointerEvents: 'none', cursor: 'default' }}
+          >
+            {livecard ? (
+              <div style={{ borderRadius: 6, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
+                <LivecardSquarePreview scale={squareThumbScale} idPrefix="dl-thumb-sq" />
+              </div>
+            ) : (
+              <div style={{ borderRadius: 6, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
+                <AtmosphereSvg scale={thumbScale} displayWidth={thumbDisplayW} displayHeight={thumbDisplayH} interactive={false} gapColor="transparent" />
+              </div>
+            )}
+          </div>
+          <div className="px-10 pb-6 shrink-0">
+            <span className="text-[10px] font-mono text-black/25">
+              {triptych
+                ? `${TRIPTYCH_PANEL_W} × ${TRIPTYCH_PANEL_H} per panel`
+                : livecard
+                ? `${LIVECARD_COVE_W} × ${LIVECARD_COVE_H} per cove`
+                : `${width} × ${height}`}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // --- Main Preview Area ---
 
 export function PreviewArea() {
-  const { width, height, triptych, livecard, theme } = useStore((s) => ({
-    width: s.width, height: s.height, triptych: s.triptych, livecard: s.livecard, theme: s.theme,
+  const { width, height, triptych, livecard } = useStore((s) => ({
+    width: s.width, height: s.height, triptych: s.triptych, livecard: s.livecard,
   }))
   const setDimensions = useStore((s) => s.setDimensions)
   const [isResizing, setIsResizing] = useState(false)
   const wScrub = useScrub(width, (w) => setDimensions(w, height), 100, 4000)
   const hScrub = useScrub(height, (h) => setDimensions(width, h), 100, 4000)
-  const { containerRef, scale, setScale, resetToFit, isManualScale, displayWidth, displayHeight } = useCanvasFit(width, height)
+  const { containerRef, scale, setScale, resetToFit, isManualScale, displayWidth, displayHeight } = useCanvasFit(width, height, (triptych || livecard) ? 320 : 160)
   const { handleMouseDown } = useCanvasResize(scale, setIsResizing)
   const zoomPct = Math.round(scale * 100)
 
   const [exportOpen, setExportOpen] = useState(false)
-
-  useEffect(() => {
-    if (!exportOpen) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setExportOpen(false) }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [exportOpen])
 
   const zoomControls = (
     <div className="absolute right-0 flex items-center gap-0.5">
@@ -879,41 +978,7 @@ export function PreviewArea() {
   return (
     <div className="flex-1 relative flex flex-col min-h-0" style={{ backgroundColor: '#1d0029' }}>
       <GooeyFilter />
-      {/* Download modal */}
-      {exportOpen && (
-        <div
-          className="absolute inset-0 z-30 bg-black/75 overflow-y-auto"
-          onClick={() => setExportOpen(false)}
-        >
-          <div className="min-h-full flex items-start justify-center pt-14 px-8 pb-14">
-            <div
-              className="w-full max-w-[540px]"
-              style={{ backgroundColor: '#140020', boxShadow: '0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-end justify-between px-10 pt-10 pb-8 border-b border-white/[0.06]">
-                <div className="flex flex-col gap-1.5">
-                  <h2 className="text-[52px] font-black tracking-tighter text-white leading-none">
-                    Download
-                  </h2>
-                  <span className="text-sm text-white/30 capitalize font-mono">
-                    {theme} &middot; {triptych ? `${TRIPTYCH_PANEL_W} × ${TRIPTYCH_PANEL_H} per panel` : livecard ? `${LIVECARD_COVE_W} × ${LIVECARD_COVE_H} per cove` : `${width} × ${height}`}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setExportOpen(false)}
-                  className="text-white/20 hover:text-white transition-colors text-[10px] uppercase tracking-widest mb-1.5"
-                >
-                  ESC
-                </button>
-              </div>
-              <div className="px-10 py-9">
-                <ExportPanel isTriptych={triptych} isLivecard={livecard} />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {exportOpen && <DownloadModal onClose={() => setExportOpen(false)} />}
 
       {/* Canvas area with side columns */}
       <div ref={containerRef} className="flex-1 flex items-center justify-center px-4 min-h-0 overflow-hidden">
@@ -1060,6 +1125,36 @@ export function PreviewArea() {
               </div>
             )}
           </div>
+
+          {/* Livecard squares — half size, centered between coves 1-2 and 4-5 */}
+          {livecard && (() => {
+            const sq1CenterX = (LIVECARD_COVES[0].x + LIVECARD_COVES[1].x + LIVECARD_COVE_W) / 2 // 1951
+            const sq2CenterX = (LIVECARD_COVES[3].x + LIVECARD_COVES[4].x + LIVECARD_COVE_W) / 2 // 7897
+            const halfSq = LIVECARD_SQUARE_SIZE / 2 // 960 canvas px
+            const displaySize = Math.round(halfSq * scale)
+            const squares = [
+              { id: 'square-001', leftX: sq1CenterX - halfSq / 2 },
+              { id: 'square-002', leftX: sq2CenterX - halfSq / 2 },
+            ]
+            return (
+              <div className="relative mt-4" style={{ width: displayWidth, height: displaySize }}>
+                {squares.map((sq) => (
+                  <div
+                    key={sq.id}
+                    className="absolute overflow-hidden"
+                    style={{
+                      left: Math.round(sq.leftX * scale),
+                      top: 0,
+                      borderRadius: 3,
+                      boxShadow: '0 0 0 1px rgba(255,255,255,0.1), 0 12px 48px rgba(0,0,0,0.8)',
+                    }}
+                  >
+                    <LivecardSquarePreview scale={scale / 2} idPrefix={sq.id} />
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
 
           {/* Themes - below canvas */}
           <div className="mt-1 flex flex-col items-center gap-2">
