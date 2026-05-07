@@ -116,16 +116,17 @@ export const useStore = create<Store>((set, get) => ({
   setCirclePosition: (role, x, y) =>
     set((s) => {
       const idx = s.circles.findIndex((c) => c.role === role)
-      const circle = s.circles[idx]
+      if (idx === -1) return {}
       const clamped = constrainCircle(role, x, y, s.width, s.height)
       const updated = [...s.circles] as AppState['circles']
-      updated[idx] = { ...circle, x: clamped.x, y: clamped.y }
+      updated[idx] = { ...s.circles[idx], x: clamped.x, y: clamped.y }
       return { circles: updated }
     }),
 
   setCircleColor: (role, color) =>
     set((s) => {
       const idx = s.circles.findIndex((c) => c.role === role)
+      if (idx === -1) return {}
       const updated = [...s.circles] as AppState['circles']
       updated[idx] = { ...s.circles[idx], color }
       return { circles: updated }

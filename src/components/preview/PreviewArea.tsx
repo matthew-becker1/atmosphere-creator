@@ -13,15 +13,32 @@ import { exportSvg, exportPng, exportWebp, exportJpg, downloadZip, svgFileEntry,
 import type { ImageFormat } from '../../lib/exportPng'
 import type { ThemeName } from '../../types'
 
-const HANDLE_SIZE = 16
-const EDGE_SIZE = 8
+const HANDLE_SIZE = 48
+const EDGE_SIZE = 14
 
-const FIGMA_NOISE_INSTRUCTIONS = `To match noise in Figma:
-1. Draw a rect over the full frame
-2. Fill → + → Noise (not solid)
-   Size: 200  Opacity: 8%
-3. Set layer blend mode to Soft Light
-4. Set layer opacity to 100%`
+type NoiseApp = 'figma' | 'ps' | 'ai'
+const NOISE_STEPS: Record<NoiseApp, string[]> = {
+  figma: [
+    'Draw a rect over the full frame',
+    'Fill → + → Noise  ·  Size 200  ·  Opacity 8%',
+    'Layer blend mode: Soft Light',
+  ],
+  ps: [
+    'New layer above gradient',
+    'Filter → Render → Clouds',
+    'Blend mode: Soft Light  ·  Opacity 8%',
+  ],
+  ai: [
+    'Draw a rect over the artboard',
+    'Effect → Texture → Grain  ·  Intensity 35  ·  Contrast 50  ·  Regular',
+    'Transparency: Soft Light  ·  15%',
+  ],
+}
+const NOISE_COPY: Record<NoiseApp, string> = {
+  figma: `To add noise in Figma:\n1. Draw a rect over the full frame\n2. Fill → + → Noise (not solid)\n   Size: 200  Opacity: 8%\n3. Set layer blend mode to Soft Light`,
+  ps: `To add noise in Photoshop:\n1. Add a new layer above the gradient\n2. Filter → Render → Clouds\n3. Set layer blend mode to Soft Light, opacity 8%`,
+  ai: `To add noise in Illustrator:\n1. Draw a rect covering the artboard\n2. Effect → Texture → Grain: Intensity 35, Contrast 50, Type: Regular\n3. In Transparency panel: Soft Light, opacity 15%`,
+}
 
 // --- Floating Panel Components ---
 
@@ -72,7 +89,7 @@ function formatBytes(bytes: number): string {
 function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLivecard: boolean }) {
   const [format, setFormat] = useState<ExportFormat>('png')
   const [rasterScale, setRasterScale] = useState<1 | 2>(1)
-  const [showNoisePopup, setShowNoisePopup] = useState(false)
+  const [noiseAppTab, setNoiseAppTab] = useState<NoiseApp>('figma')
   const [copied, setCopied] = useState(false)
   const [batchProgress, setBatchProgress] = useState<number | null>(null)
   const { theme, width, height, noiseIntensity } = useStore((s) => ({ theme: s.theme, width: s.width, height: s.height, noiseIntensity: s.noiseIntensity }))
@@ -192,7 +209,6 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
       } else {
         exportSvg(buildSvgString(state), `atmosphere-${state.theme}-${state.width}x${state.height}.svg`)
       }
-      setShowNoisePopup(true)
     } else {
       if (isTriptych) {
         const fullSvg = buildSvgString(state)
@@ -275,7 +291,6 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
           await new Promise((r) => setTimeout(r, 80))
         }
       }
-      setShowNoisePopup(true)
     } else {
       if (isTriptych) {
         for (const theme of THEME_NAMES) {
@@ -322,10 +337,10 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
   }
 
   const copyNoise = () => {
-    navigator.clipboard.writeText(FIGMA_NOISE_INSTRUCTIONS).then(() => {
+    navigator.clipboard.writeText(NOISE_COPY[noiseAppTab]).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-    })
+    }).catch(() => {})
   }
 
   const batchLabel = isBusy
@@ -372,12 +387,7 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
 
         {/* 3 — Noise */}
         <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-widest text-black/35">Noise</span>
-            {isSvg && noiseOn && (
-              <span className="text-[10px] text-black/30">Add manually in Figma</span>
-            )}
-          </div>
+          <span className="text-[10px] uppercase tracking-widest text-black/35">Noise</span>
           <button
             onClick={toggleNoise}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
@@ -390,6 +400,39 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
             {noiseOn ? 'On' : 'Off'}
           </button>
         </div>
+
+        {/* Noise app instructions — SVG only */}
+        {isSvg && (
+          <div className="flex flex-col gap-3">
+            <span className="text-[10px] uppercase tracking-widest text-black/35">Add noise in</span>
+            <div className="flex gap-1">
+              {(['figma', 'ps', 'ai'] as NoiseApp[]).map((app) => (
+                <button
+                  key={app}
+                  onClick={() => setNoiseAppTab(app)}
+                  className={`flex-1 py-1.5 text-[10px] rounded-lg transition-colors ${
+                    noiseAppTab === app
+                      ? 'bg-[#1d0029] text-white'
+                      : 'bg-black/[0.06] text-black/40 hover:text-black/70'
+                  }`}
+                >
+                  {app === 'figma' ? 'Figma' : app === 'ps' ? 'Photoshop' : 'Illustrator'}
+                </button>
+              ))}
+            </div>
+            <ol className="flex flex-col gap-2">
+              {NOISE_STEPS[noiseAppTab].map((step, i) => (
+                <li key={i} className="flex gap-2 text-[11px] text-black/40 leading-snug">
+                  <span className="text-black/20 shrink-0 font-mono tabular-nums">{i + 1}.</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+            <button onClick={copyNoise} className="self-start text-[10px] text-black/30 hover:text-black/60 transition-colors">
+              {copied ? 'Copied' : 'Copy instructions'}
+            </button>
+          </div>
+        )}
 
         {/* 4 — Filename */}
         <div className="flex flex-col gap-2">
@@ -421,21 +464,6 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
         </div>
       </div>
 
-      {/* Figma noise tip — SVG exports only */}
-      {showNoisePopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" onClick={() => setShowNoisePopup(false)}>
-          <div className="bg-neutral-900 border border-white/15 rounded-xl p-6 shadow-2xl w-80" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between mb-3">
-              <span className="text-sm font-medium text-white">Applying noise in Figma</span>
-              <button onClick={() => setShowNoisePopup(false)} className="text-white/40 hover:text-white leading-none ml-3">×</button>
-            </div>
-            <pre className="text-xs text-white/55 leading-relaxed whitespace-pre-wrap font-mono mb-4">{FIGMA_NOISE_INSTRUCTIONS}</pre>
-            <button onClick={copyNoise} className="text-xs text-white/40 hover:text-white/70 transition-colors">
-              {copied ? 'Copied' : 'Copy instructions'}
-            </button>
-          </div>
-        </div>
-      )}
     </>
   )
 }
@@ -569,7 +597,7 @@ function PresetDropdown() {
           <option value="livecard" className="bg-neutral-900 normal-case tracking-normal">Livecard MAX  ·  5 coves + 2 sq</option>
         </optgroup>
         <optgroup label="──────────────" className="bg-neutral-900">
-          <option value="custom" className="bg-neutral-900 normal-case tracking-normal">Custom</option>
+          <option value="custom" className="bg-neutral-900 normal-case tracking-normal">Choose a preset</option>
         </optgroup>
       </select>
       <svg className="pointer-events-none absolute right-2.5 w-2.5 h-2.5 text-white/30" viewBox="0 0 12 12" fill="none">
@@ -827,15 +855,17 @@ function BackgroundToggle() {
 
 // --- Resize Handles ---
 
-function ResizeHandle({ 
-  position, 
-  onMouseDown 
-}: { 
+function ResizeHandle({
+  position,
+  onMouseDown
+}: {
   position: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
-  onMouseDown: (e: React.MouseEvent) => void 
+  onMouseDown: (e: React.MouseEvent) => void
 }) {
   const isCorner = position.length === 2
   const size = isCorner ? HANDLE_SIZE : EDGE_SIZE
+  const isVerticalEdge = position === 'e' || position === 'w'
+  const [hovered, setHovered] = useState(false)
 
   const cursorMap: Record<string, string> = {
     n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize',
@@ -853,12 +883,71 @@ function ResizeHandle({
     sw: { bottom: -size / 2, left: -size / 2, width: size, height: size },
   }
 
+  const c = size / 2
+  const arm = 18
+  const gap = 6
+  const cornerArms: Record<string, { x1: number; y1: number; x2: number; y2: number }[]> = {
+    nw: [{ x1: c-gap, y1: c-gap, x2: c-gap+arm, y2: c-gap }, { x1: c-gap, y1: c-gap, x2: c-gap, y2: c-gap+arm }],
+    ne: [{ x1: c+gap-arm, y1: c-gap, x2: c+gap, y2: c-gap }, { x1: c+gap, y1: c-gap, x2: c+gap, y2: c-gap+arm }],
+    se: [{ x1: c+gap-arm, y1: c+gap, x2: c+gap, y2: c+gap }, { x1: c+gap, y1: c+gap-arm, x2: c+gap, y2: c+gap }],
+    sw: [{ x1: c-gap, y1: c+gap, x2: c-gap+arm, y2: c+gap }, { x1: c-gap, y1: c+gap-arm, x2: c-gap, y2: c+gap }],
+  }
+
+  if (isCorner) {
+    const arms = cornerArms[position]
+    const cur = cursorMap[position]
+    return (
+      <div className="absolute" style={{ ...positionStyles[position], zIndex: 30, pointerEvents: 'none' }}>
+        <svg
+          width={size} height={size}
+          pointerEvents="none"
+          style={{ display: 'block', opacity: hovered ? 1 : 0.5, transition: 'opacity 0.15s' }}
+        >
+          {arms.map((seg, i) => (
+            <g key={i}>
+              <line
+                x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2}
+                stroke="transparent" strokeWidth="14" strokeLinecap="round"
+                pointerEvents="stroke"
+                style={{ cursor: cur }}
+                onMouseDown={onMouseDown}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+              />
+              <line
+                x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2}
+                stroke="white" strokeWidth="3" strokeLinecap="round"
+                pointerEvents="none"
+              />
+            </g>
+          ))}
+        </svg>
+      </div>
+    )
+  }
+
+  const edgeBarPos: Record<string, React.CSSProperties> = {
+    n: { top: `calc(50% - ${gap}px)`, left: '50%' },
+    s: { top: `calc(50% + ${gap}px)`, left: '50%' },
+    e: { top: '50%', left: `calc(50% + ${gap}px)` },
+    w: { top: '50%', left: `calc(50% - ${gap}px)` },
+  }
+
   return (
     <div
       onMouseDown={onMouseDown}
-      className={`absolute ${isCorner ? 'bg-white/50 rounded hover:bg-white z-20' : 'bg-transparent hover:bg-white/20 z-10'} transition-colors`}
-      style={{ ...positionStyles[position], cursor: cursorMap[position] }}
-    />
+      className="absolute group/hdl"
+      style={{ ...positionStyles[position], cursor: cursorMap[position], zIndex: 10 }}
+    >
+      <svg
+        width={isVerticalEdge ? 4 : 48}
+        height={isVerticalEdge ? 48 : 4}
+        className="opacity-50 group-hover/hdl:opacity-90 transition-opacity"
+        style={{ position: 'absolute', ...edgeBarPos[position], transform: 'translate(-50%, -50%)', display: 'block' }}
+      >
+        <rect x={0} y={0} width="100%" height="100%" fill="white" rx={2} />
+      </svg>
+    </div>
   )
 }
 
@@ -878,15 +967,24 @@ function DownloadModal({ onClose }: { onClose: () => void }) {
   const THUMB_W = 220
   const THUMB_H = 150
 
-  const thumbCanvasW = triptych ? TRIPTYCH_TOTAL_W : width
-  const thumbCanvasH = triptych ? TRIPTYCH_PANEL_H : height
-  const thumbScale = Math.min(THUMB_W / thumbCanvasW, THUMB_H / thumbCanvasH)
-  const thumbDisplayW = Math.round(thumbCanvasW * thumbScale)
-  const thumbDisplayH = Math.round(thumbCanvasH * thumbScale)
-  const squareThumbScale = Math.min(THUMB_W, THUMB_H) / LIVECARD_SQUARE_SIZE
+  // Standard: scale to fit THUMB box
+  const thumbScale = Math.min(THUMB_W / width, THUMB_H / height)
+  const thumbDisplayW = Math.round(width * thumbScale)
+  const thumbDisplayH = Math.round(height * thumbScale)
+
+  // Triptych: 3 portrait panels side by side, each a crop of the full canvas
+  const panelThumbW = Math.floor((THUMB_W - 8) / 3)
+  const panelThumbScale = panelThumbW / TRIPTYCH_PANEL_W
+  const panelThumbH = Math.round(TRIPTYCH_PANEL_H * panelThumbScale)
+  const panelFullDisplayW = Math.round(TRIPTYCH_TOTAL_W * panelThumbScale)
+
+  // Livecard: render full canvas at cove-width scale, clip each cove separately
+  const coveThumbScale = THUMB_W / LIVECARD_COVE_W
+  const coveThumbDisplayW = Math.round(LIVECARD_TOTAL_W * coveThumbScale)
+  const coveThumbDisplayH = Math.round(LIVECARD_COVE_H * coveThumbScale)
 
   return (
-    <div className="absolute inset-0 z-30 flex flex-col" style={{ backgroundColor: '#fafafc' }}>
+    <div className="absolute inset-0 z-50 flex flex-col" style={{ backgroundColor: '#fafafc' }}>
       {/* Header */}
       <div className="flex items-center px-8 py-4 border-b border-black/[0.07] shrink-0">
         <button
@@ -921,25 +1019,74 @@ function DownloadModal({ onClose }: { onClose: () => void }) {
             <span className="text-[10px] uppercase tracking-widest text-black/40">Preview</span>
           </div>
           <div
-            className="flex-1 flex items-start justify-center px-10"
+            className="flex-1 overflow-y-auto flex flex-col items-center px-10 py-2"
             style={{ pointerEvents: 'none', cursor: 'default' }}
           >
             {livecard ? (
-              <div style={{ borderRadius: 6, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
-                <LivecardSquarePreview scale={squareThumbScale} idPrefix="dl-thumb-sq" />
+              <div className="flex flex-col gap-1.5 w-full" style={{ maxWidth: THUMB_W + 32 }}>
+                {/* 5 coves — each is a crop of the full-canvas render */}
+                {LIVECARD_COVES.map((cove, i) => {
+                  const offsetX = Math.round(cove.x * coveThumbScale)
+                  return (
+                    <div key={cove.label} className="flex items-center gap-2">
+                      <div style={{ width: THUMB_W, height: coveThumbDisplayH, overflow: 'hidden', borderRadius: 3, boxShadow: '0 2px 10px rgba(0,0,0,0.2)', flexShrink: 0, position: 'relative' }}>
+                        <div style={{ position: 'absolute', left: -offsetX }}>
+                          <AtmosphereSvg scale={coveThumbScale} displayWidth={coveThumbDisplayW} displayHeight={coveThumbDisplayH} interactive={false} gapColor="transparent" idPrefix={`dl-cove-${i}`} />
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono text-black/30 shrink-0">{String(i + 1).padStart(3, '0')}</span>
+                    </div>
+                  )
+                })}
+
+                {/* 2 squares — remapped gradient at 1920×1920 */}
+                {(() => {
+                  const sqSize = Math.floor((THUMB_W - 4) / 2)
+                  const sqScale = sqSize / LIVECARD_SQUARE_SIZE
+                  return (
+                    <div className="flex gap-1 mt-1">
+                      {LIVECARD_SQUARES.map((sq, i) => (
+                        <div key={sq.label} className="flex flex-col gap-1">
+                          <div style={{ borderRadius: 3, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                            <LivecardSquarePreview scale={sqScale} idPrefix={`dl-sq-${i}`} />
+                          </div>
+                          <span className="text-[9px] font-mono text-black/30 text-center">sq · {String(i + 1).padStart(3, '0')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            ) : triptych ? (
+              // 3 portrait panels side by side — each crop matches one downloaded file
+              <div className="flex gap-1">
+                {TRIPTYCH_PANELS.map((panel, i) => {
+                  const offsetX = Math.round(panel.x * panelThumbScale)
+                  return (
+                    <div key={panel.label} className="flex flex-col items-center gap-1">
+                      <div style={{ width: panelThumbW, height: panelThumbH, overflow: 'hidden', borderRadius: 3, boxShadow: '0 2px 10px rgba(0,0,0,0.2)', position: 'relative' }}>
+                        <div style={{ position: 'absolute', left: -offsetX }}>
+                          <AtmosphereSvg scale={panelThumbScale} displayWidth={panelFullDisplayW} displayHeight={panelThumbH} interactive={false} gapColor="transparent" idPrefix={`dl-panel-${i}`} />
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono text-black/30">{panel.label}</span>
+                    </div>
+                  )
+                })}
               </div>
             ) : (
+              // Standard
               <div style={{ borderRadius: 6, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
-                <AtmosphereSvg scale={thumbScale} displayWidth={thumbDisplayW} displayHeight={thumbDisplayH} interactive={false} gapColor="transparent" />
+                <AtmosphereSvg scale={thumbScale} displayWidth={thumbDisplayW} displayHeight={thumbDisplayH} interactive={false} gapColor="transparent" idPrefix="dl-thumb" />
               </div>
             )}
           </div>
           <div className="px-10 pb-6 shrink-0">
             <span className="text-[10px] font-mono text-black/25">
               {triptych
-                ? `${TRIPTYCH_PANEL_W} × ${TRIPTYCH_PANEL_H} per panel`
+                ? `${TRIPTYCH_PANEL_W} × ${TRIPTYCH_PANEL_H} per panel · 3 panels`
                 : livecard
-                ? `${LIVECARD_COVE_W} × ${LIVECARD_COVE_H} per cove`
+                ? `${LIVECARD_COVE_W} × ${LIVECARD_COVE_H} per cove · 5 coves + 2 squares`
                 : `${width} × ${height}`}
             </span>
           </div>
@@ -956,11 +1103,10 @@ export function PreviewArea() {
     width: s.width, height: s.height, triptych: s.triptych, livecard: s.livecard,
   }))
   const setDimensions = useStore((s) => s.setDimensions)
-  const [isResizing, setIsResizing] = useState(false)
   const wScrub = useScrub(width, (w) => setDimensions(w, height), 100, 4000)
   const hScrub = useScrub(height, (h) => setDimensions(width, h), 100, 4000)
   const { containerRef, scale, setScale, resetToFit, isManualScale, displayWidth, displayHeight } = useCanvasFit(width, height, (triptych || livecard) ? 320 : 160)
-  const { handleMouseDown } = useCanvasResize(scale, setIsResizing)
+  const { handleMouseDown } = useCanvasResize(scale)
   const zoomPct = Math.round(scale * 100)
 
   const [exportOpen, setExportOpen] = useState(false)
@@ -1113,13 +1259,13 @@ export function PreviewArea() {
             <AtmosphereSvg scale={scale} displayWidth={displayWidth} displayHeight={displayHeight} />
 
             {!triptych && !livecard && (
-              <div className={`transition-opacity ${isResizing ? 'opacity-100' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'}`}>
+              <div>
                 <ResizeHandle position="n" onMouseDown={handleMouseDown('n')} />
                 <ResizeHandle position="s" onMouseDown={handleMouseDown('s')} />
                 <ResizeHandle position="e" onMouseDown={handleMouseDown('e')} />
                 <ResizeHandle position="w" onMouseDown={handleMouseDown('w')} />
-                <ResizeHandle position="ne" onMouseDown={handleMouseDown('ne')} />
                 <ResizeHandle position="nw" onMouseDown={handleMouseDown('nw')} />
+                <ResizeHandle position="ne" onMouseDown={handleMouseDown('ne')} />
                 <ResizeHandle position="se" onMouseDown={handleMouseDown('se')} />
                 <ResizeHandle position="sw" onMouseDown={handleMouseDown('sw')} />
               </div>

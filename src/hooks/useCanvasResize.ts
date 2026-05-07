@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
@@ -6,10 +6,11 @@ type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 const MIN_SIZE = 100
 const MAX_SIZE = 4000
 
-export function useCanvasResize(scale: number, setIsResizing: (v: boolean) => void) {
+export function useCanvasResize(scale: number) {
   const setDimensions = useStore((s) => s.setDimensions)
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
+  const [isResizing, setIsResizing] = useState(false)
   const dragRef = useRef<{
     startX: number
     startY: number
@@ -67,5 +68,5 @@ export function useCanvasResize(scale: number, setIsResizing: (v: boolean) => vo
     [scale, width, height, setDimensions, setIsResizing]
   )
 
-  return { handleMouseDown }
+  return { handleMouseDown, isResizing }
 }

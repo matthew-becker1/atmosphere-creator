@@ -21,7 +21,7 @@ export function buildSvgString(state: AppState, crop?: { x: number; w: number; h
   const viewBox = crop ? `${crop.x} 0 ${crop.w} ${crop.h}` : `0 0 ${W} ${H}`
 
   const noiseLayer = noiseIntensity > 0
-    ? `\n  <rect width="${W}" height="${H}" fill="transparent" filter="url(#noise)" opacity="${noiseIntensity.toFixed(3)}" style="mix-blend-mode: soft-light"/>`
+    ? `\n  <rect width="${W}" height="${H}" fill="transparent" filter="url(#noise)" opacity="${noiseIntensity.toFixed(3)}" style="-webkit-mix-blend-mode: soft-light; mix-blend-mode: soft-light"/>`
     : ''
 
   const logoLayer = showLogo
