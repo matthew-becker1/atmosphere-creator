@@ -41,6 +41,7 @@ interface Store extends AppState {
   setDraggingRole: (role: CircleRole | null) => void
   toggleBackground: () => void
   toggleLogo: () => void
+  setLogoSize: (size: 'regular' | 'large') => void
 }
 
 const DEFAULT_WIDTH = 1080
@@ -57,6 +58,7 @@ export const useStore = create<Store>((set, get) => ({
   draggingRole: null,
   darkBackground: true,
   showLogo: false,
+  logoSize: 'regular',
   noiseIntensity: DEFAULT_NOISE,
   noiseScale: DEFAULT_NOISE_SCALE,
   layerOrder: DEFAULT_LAYER_ORDER,
@@ -157,4 +159,5 @@ export const useStore = create<Store>((set, get) => ({
   setDraggingRole: (role) => set({ draggingRole: role }),
   toggleBackground: () => set((s) => ({ darkBackground: !s.darkBackground })),
   toggleLogo: () => set((s) => ({ showLogo: !s.showLogo })),
+  setLogoSize: (size) => set({ logoSize: size }),
 }))

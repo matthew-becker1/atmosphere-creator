@@ -8,7 +8,7 @@ const LOGO_VIEWBOX_WIDTH = 965.8955
 const LOGO_VIEWBOX_HEIGHT = 299.9957
 
 export function buildSvgString(state: AppState, crop?: { x: number; w: number; h: number }, logoOpts?: { centerX?: number; refW?: number }): string {
-  const { width: W, height: H, circles, layerOrder, theme, noiseIntensity, noiseScale, darkBackground, showLogo } = state
+  const { width: W, height: H, circles, layerOrder, theme, noiseIntensity, noiseScale, darkBackground, showLogo, logoSize } = state
   const bgColor = darkBackground ? '#000000' : '#ffffff'
   const orderedCircles = layerOrder.map((role) => circles.find((c) => c.role === role)!)
   const radius = computeRadius(W, H)
@@ -28,7 +28,7 @@ export function buildSvgString(state: AppState, crop?: { x: number; w: number; h
     ? (() => {
         const refW = logoOpts?.refW ?? (state.triptych ? TRIPTYCH_PANEL_W : W)
         const centerX = logoOpts?.centerX ?? (state.triptych ? TRIPTYCH_PANEL_W + TRIPTYCH_GAP + TRIPTYCH_PANEL_W / 2 : W / 2)
-        const logoWidth = refW * 0.5
+        const logoWidth = refW * (logoSize === 'large' ? 0.8 : 0.5)
         const logoScale = logoWidth / LOGO_VIEWBOX_WIDTH
         const logoHeight = LOGO_VIEWBOX_HEIGHT * logoScale
         const logoX = centerX - logoWidth / 2

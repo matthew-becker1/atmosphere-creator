@@ -808,23 +808,41 @@ function PresetDropdown() {
 }
 
 function LogoToggle() {
-  const showLogo = useStore((s) => s.showLogo)
+  const { showLogo, logoSize } = useStore((s) => ({ showLogo: s.showLogo, logoSize: s.logoSize }))
   const toggleLogo = useStore((s) => s.toggleLogo)
+  const setLogoSize = useStore((s) => s.setLogoSize)
 
   return (
-    <button
-      onClick={toggleLogo}
-      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-        showLogo ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60 hover:bg-white/5'
-      }`}
-      title="Toggle logo"
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M9 12h6M12 9v6" />
-      </svg>
-      <span className="text-[10px] uppercase tracking-wide">Logo</span>
-    </button>
+    <div className="flex flex-col items-center gap-1">
+      <button
+        onClick={toggleLogo}
+        className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+          showLogo ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+        }`}
+        title="Toggle logo"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <path d="M9 12h6M12 9v6" />
+        </svg>
+        <span className="text-[10px] uppercase tracking-wide">Logo</span>
+      </button>
+      {showLogo && (
+        <div className="flex gap-0.5">
+          {(['regular', 'large'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setLogoSize(s)}
+              className={`px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide transition-colors ${
+                logoSize === s ? 'bg-white/15 text-white' : 'text-white/30 hover:text-white/60'
+              }`}
+            >
+              {s === 'regular' ? 'S' : 'L'}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

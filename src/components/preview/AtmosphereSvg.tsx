@@ -19,7 +19,7 @@ const LOGO_VIEWBOX_WIDTH = 965.8955
 const LOGO_VIEWBOX_HEIGHT = 299.9957
 
 export function LivecardSquarePreview({ scale, idPrefix }: { scale: number; idPrefix: string }) {
-  const { circles, layerOrder, noiseIntensity, noiseScale, darkBackground, showLogo } = useStore()
+  const { circles, layerOrder, noiseIntensity, noiseScale, darkBackground, showLogo, logoSize } = useStore()
   const bgColor = darkBackground ? '#000000' : '#ffffff'
   const SQ = LIVECARD_SQUARE_SIZE
   const orderedCircles = layerOrder.map((role) => circles.find((c) => c.role === role)!)
@@ -33,7 +33,7 @@ export function LivecardSquarePreview({ scale, idPrefix }: { scale: number; idPr
   const squareCircles = orderedCircles.map((c) => ({ ...c, x: (c.x / LIVECARD_TOTAL_W) * SQ, y: (c.y / LIVECARD_COVE_H) * SQ }))
   const displaySize = Math.round(SQ * scale)
 
-  const logoWidth = SQ * 0.5
+  const logoWidth = SQ * (logoSize === 'large' ? 0.8 : 0.5)
   const logoScl = logoWidth / LOGO_VIEWBOX_WIDTH
   const logoHeight = LOGO_VIEWBOX_HEIGHT * logoScl
   const logoX = (SQ - logoWidth) / 2
@@ -83,7 +83,7 @@ export function LivecardSquarePreview({ scale, idPrefix }: { scale: number; idPr
 }
 
 export function AtmosphereSvg({ scale, displayWidth, displayHeight, interactive = true, gapColor = '#1d0029', idPrefix = 'canvas' }: Props) {
-  const { width: W, height: H, circles, layerOrder, showGuides, draggingRole, noiseIntensity, noiseScale, darkBackground, showLogo, triptych, livecard } = useStore()
+  const { width: W, height: H, circles, layerOrder, showGuides, draggingRole, noiseIntensity, noiseScale, darkBackground, showLogo, logoSize, triptych, livecard } = useStore()
   const bgColor = darkBackground ? '#000000' : '#ffffff'
   const orderedCircles = layerOrder.map((role) => circles.find((c) => c.role === role)!)
   const radius = computeRadius(W, H)
@@ -148,7 +148,7 @@ export function AtmosphereSvg({ scale, displayWidth, displayHeight, interactive 
         {showLogo && !livecard && (() => {
           const refW = triptych ? TRIPTYCH_PANEL_W : W
           const centerX = triptych ? TRIPTYCH_PANEL_W + TRIPTYCH_GAP + TRIPTYCH_PANEL_W / 2 : W / 2
-          const logoWidth = refW * 0.5
+          const logoWidth = refW * (logoSize === 'large' ? 0.8 : 0.5)
           const logoScale = logoWidth / LOGO_VIEWBOX_WIDTH
           const logoHeight = LOGO_VIEWBOX_HEIGHT * logoScale
           const logoX = centerX - logoWidth / 2
@@ -161,7 +161,7 @@ export function AtmosphereSvg({ scale, displayWidth, displayHeight, interactive 
         })()}
 
         {showLogo && livecard && (() => {
-          const logoWidth = LIVECARD_COVE_W * 0.5
+          const logoWidth = LIVECARD_COVE_W * (logoSize === 'large' ? 0.8 : 0.5)
           const logoScale = logoWidth / LOGO_VIEWBOX_WIDTH
           const logoHeight = LOGO_VIEWBOX_HEIGHT * logoScale
           const logoY = (H - logoHeight) / 2

@@ -23,6 +23,7 @@ export interface AppState {
   noiseScale: number
   darkBackground: boolean
   showLogo: boolean
+  logoSize: 'regular' | 'large'
   layerOrder: [CircleRole, CircleRole, CircleRole]
   circles: [CircleState, CircleState, CircleState]
 }
