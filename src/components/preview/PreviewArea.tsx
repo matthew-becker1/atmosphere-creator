@@ -92,9 +92,11 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
   const [noiseAppTab, setNoiseAppTab] = useState<NoiseApp>('figma')
   const [copied, setCopied] = useState(false)
   const [batchProgress, setBatchProgress] = useState<number | null>(null)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [batchCustomSizes, setBatchCustomSizes] = useState<{ width: number; height: number }[]>([])
   const [batchInputW, setBatchInputW] = useState('')
   const [batchInputH, setBatchInputH] = useState('')
+  const [batchCustomName, setBatchCustomName] = useState('')
   const [batchSelectedThemes, setBatchSelectedThemes] = useState<Set<ThemeName>>(
     () => new Set(THEME_NAMES as ThemeName[])
   )
@@ -372,7 +374,8 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
           })) as AppState['circles'],
         }
         const svg = buildSvgString(remapped)
-        const fn = `atmosphere-${themeName}-${preset.width}x${preset.height}${suffix}.${isSvg ? 'svg' : fmt}`
+        const baseName = batchCustomName.trim() || 'atmosphere'
+        const fn = `${baseName}_${themeName}_${preset.width}x${preset.height}${suffix}.${isSvg ? 'svg' : fmt}`
         if (isSvg) {
           files.push(svgFileEntry(svg, fn))
         } else {
@@ -511,7 +514,7 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
           </button>
         </div>
 
-        {/* 5 — Batch sizes (standard only) */}
+        {/* 5 — Advanced export (standard only) */}
         {!isTriptych && !isLivecard && (() => {
           const selectedThemeCount = THEME_NAMES.filter((t) => batchSelectedThemes.has(t as ThemeName)).length
           const allThemesSelected = selectedThemeCount === THEME_NAMES.length
@@ -534,12 +537,47 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
             return next
           })
 
+          const namePreview = (() => {
+            const base = batchCustomName.trim() || 'atmosphere'
+            const firstTheme = (THEME_NAMES as ThemeName[]).find((t) => batchSelectedThemes.has(t)) ?? 'twilight'
+            const firstSize = batchCustomSizes[0]
+            const dimPart = firstSize ? `${firstSize.width}x${firstSize.height}` : '###x###'
+            return `${base}_${firstTheme}_${dimPart}${!isSvg && rasterScale === 2 ? '@2x' : ''}.${isSvg ? 'svg' : format}`
+          })()
+
           return (
-            <div className="flex flex-col gap-5 pt-4 border-t border-black/[0.07]">
+            <div className="flex flex-col gap-2 pt-4 border-t border-black/[0.07]">
+              <button
+                onClick={() => setAdvancedOpen((v) => !v)}
+                className="flex items-center justify-between w-full text-left"
+              >
+                <span className="text-[10px] uppercase tracking-widest text-black/35">Advanced export</span>
+                <svg
+                  width="10" height="10" viewBox="0 0 10 10" fill="none"
+                  className={`text-black/25 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+                >
+                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+
+            {advancedOpen && <div className="flex flex-col gap-5 pt-2">
+
+              {/* Custom name */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] uppercase tracking-widest text-black/35">File name</span>
+                <input
+                  type="text"
+                  placeholder="atmosphere"
+                  value={batchCustomName}
+                  onChange={(e) => setBatchCustomName(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg bg-black/[0.06] border border-black/[0.08] text-xs font-mono text-black/70 placeholder-black/20 outline-none focus:border-black/20"
+                />
+                <span className="text-[10px] font-mono text-black/25 break-all">{namePreview}</span>
+              </div>
 
               {/* Size entry */}
               <div className="flex flex-col gap-3">
-                <span className="text-[10px] uppercase tracking-widest text-black/35">Batch sizes</span>
+                <span className="text-[10px] uppercase tracking-widest text-black/35">Sizes</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -620,6 +658,7 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
               >
                 {isBusy ? `${batchProgress}…` : batchFileCount === 0 ? 'Add sizes and select themes' : `Export batch · ${batchFileCount} file${batchFileCount !== 1 ? 's' : ''}`}
               </button>
+            </div>}
             </div>
           )
         })()}
