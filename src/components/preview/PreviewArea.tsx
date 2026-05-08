@@ -11,7 +11,7 @@ import { LIVECARD_COVES, LIVECARD_COVE_W, LIVECARD_COVE_H, LIVECARD_SQUARES, LIV
 import { buildSvgString, buildLivecardSquareSvg } from '../../lib/svgBuilder'
 import { exportSvg, exportPng, exportWebp, exportJpg, downloadZip, svgFileEntry, imageFileEntry, cropImageFileEntry } from '../../lib/exportPng'
 import type { ImageFormat } from '../../lib/exportPng'
-import type { ThemeName } from '../../types'
+import type { ThemeName, AppState } from '../../types'
 
 const HANDLE_SIZE = 48
 const EDGE_SIZE = 14
@@ -92,6 +92,12 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
   const [noiseAppTab, setNoiseAppTab] = useState<NoiseApp>('figma')
   const [copied, setCopied] = useState(false)
   const [batchProgress, setBatchProgress] = useState<number | null>(null)
+  const [batchSelectedSizes, setBatchSelectedSizes] = useState<Set<string>>(
+    () => new Set(PRESETS.map((p) => `${p.width}x${p.height}`))
+  )
+  const [batchSelectedThemes, setBatchSelectedThemes] = useState<Set<ThemeName>>(
+    () => new Set(THEME_NAMES as ThemeName[])
+  )
   const { theme, width, height, noiseIntensity } = useStore((s) => ({ theme: s.theme, width: s.width, height: s.height, noiseIntensity: s.noiseIntensity }))
   const setNoiseIntensity = useStore((s) => s.setNoiseIntensity)
   const prevNoiseRef = useRef(noiseIntensity > 0 ? noiseIntensity : 1)
@@ -336,6 +342,49 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
     setBatchProgress(null)
   }
 
+  const handleSizeBatchExport = async () => {
+    const baseState = useStore.getState()
+    const { width: srcW, height: srcH } = baseState
+    const suffix = !isSvg && rasterScale === 2 ? '@2x' : ''
+    const fmt = format as ImageFormat
+    const selectedPresets = PRESETS.filter((p) => batchSelectedSizes.has(`${p.width}x${p.height}`))
+    const selectedThemes = THEME_NAMES.filter((t) => batchSelectedThemes.has(t as ThemeName)) as ThemeName[]
+    const total = selectedPresets.length * selectedThemes.length
+    if (total === 0) return
+
+    const files: { name: string; data: Uint8Array }[] = []
+    let count = 0
+
+    for (const themeName of selectedThemes) {
+      const themeState = stateForTheme(themeName)
+      for (const preset of selectedPresets) {
+        count++
+        setBatchProgress(count)
+        const remapped: AppState = {
+          ...themeState,
+          width: preset.width,
+          height: preset.height,
+          triptych: false,
+          livecard: false,
+          circles: themeState.circles.map((c) => ({
+            ...c,
+            x: (c.x / srcW) * preset.width,
+            y: (c.y / srcH) * preset.height,
+          })) as AppState['circles'],
+        }
+        const svg = buildSvgString(remapped)
+        const fn = `atmosphere-${themeName}-${preset.width}x${preset.height}${suffix}.${isSvg ? 'svg' : fmt}`
+        if (isSvg) {
+          files.push(svgFileEntry(svg, fn))
+        } else {
+          files.push(await imageFileEntry(svg, preset.width, preset.height, fn, fmt, rasterScale))
+        }
+      }
+    }
+    setBatchProgress(null)
+    downloadZip(files, `atmosphere-batch${suffix}.zip`)
+  }
+
   const copyNoise = () => {
     navigator.clipboard.writeText(NOISE_COPY[noiseAppTab]).then(() => {
       setCopied(true)
@@ -462,6 +511,91 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
             {batchLabel}
           </button>
         </div>
+
+        {/* 5 — Batch sizes (standard only) */}
+        {!isTriptych && !isLivecard && (() => {
+          const selectedPresetCount = PRESETS.filter((p) => batchSelectedSizes.has(`${p.width}x${p.height}`)).length
+          const selectedThemeCount = THEME_NAMES.filter((t) => batchSelectedThemes.has(t as ThemeName)).length
+          const batchFileCount = selectedPresetCount * selectedThemeCount
+          const allSizesSelected = selectedPresetCount === PRESETS.length
+          const allThemesSelected = selectedThemeCount === THEME_NAMES.length
+
+          const toggleSize = (key: string) => setBatchSelectedSizes((prev) => {
+            const next = new Set(prev)
+            next.has(key) ? next.delete(key) : next.add(key)
+            return next
+          })
+          const toggleTheme = (t: ThemeName) => setBatchSelectedThemes((prev) => {
+            const next = new Set(prev)
+            next.has(t) ? next.delete(t) : next.add(t)
+            return next
+          })
+
+          return (
+            <div className="flex flex-col gap-5 pt-4 border-t border-black/[0.07]">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-widest text-black/35">Batch sizes</span>
+                  <button
+                    onClick={() => setBatchSelectedSizes(allSizesSelected ? new Set() : new Set(PRESETS.map((p) => `${p.width}x${p.height}`)))}
+                    className="text-[10px] text-black/30 hover:text-black/60 transition-colors"
+                  >
+                    {allSizesSelected ? 'None' : 'All'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                  {PRESETS.map((p) => {
+                    const key = `${p.width}x${p.height}`
+                    const checked = batchSelectedSizes.has(key)
+                    return (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer group">
+                        <span className={`w-3.5 h-3.5 rounded shrink-0 border transition-colors flex items-center justify-center ${checked ? 'bg-[#1d0029] border-[#1d0029]' : 'border-black/20 group-hover:border-black/40'}`}>
+                          {checked && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                        <input type="checkbox" checked={checked} onChange={() => toggleSize(key)} className="sr-only" />
+                        <span className="text-[11px] text-black/50 group-hover:text-black/70 transition-colors font-mono">{p.label}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-widest text-black/35">Themes</span>
+                  <button
+                    onClick={() => setBatchSelectedThemes(allThemesSelected ? new Set() : new Set(THEME_NAMES as ThemeName[]))}
+                    className="text-[10px] text-black/30 hover:text-black/60 transition-colors"
+                  >
+                    {allThemesSelected ? 'None' : 'All'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                  {(THEME_NAMES as ThemeName[]).map((t) => {
+                    const checked = batchSelectedThemes.has(t)
+                    return (
+                      <label key={t} className="flex items-center gap-2 cursor-pointer group">
+                        <span className={`w-3.5 h-3.5 rounded shrink-0 border transition-colors flex items-center justify-center ${checked ? 'bg-[#1d0029] border-[#1d0029]' : 'border-black/20 group-hover:border-black/40'}`}>
+                          {checked && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                        <input type="checkbox" checked={checked} onChange={() => toggleTheme(t)} className="sr-only" />
+                        <span className="text-[11px] text-black/50 group-hover:text-black/70 transition-colors capitalize">{t}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <button
+                onClick={handleSizeBatchExport}
+                disabled={isBusy || batchFileCount === 0}
+                className="w-full py-3 rounded-2xl text-xs text-black/50 bg-black/[0.06] hover:bg-black/[0.11] hover:text-black/75 transition-colors disabled:opacity-40"
+              >
+                {isBusy ? `${batchProgress}…` : batchFileCount === 0 ? 'Select sizes and themes' : `Export batch · ${batchFileCount} file${batchFileCount !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          )
+        })()}
       </div>
 
     </>
