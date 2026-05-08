@@ -92,9 +92,9 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
   const [noiseAppTab, setNoiseAppTab] = useState<NoiseApp>('figma')
   const [copied, setCopied] = useState(false)
   const [batchProgress, setBatchProgress] = useState<number | null>(null)
-  const [batchSelectedSizes, setBatchSelectedSizes] = useState<Set<string>>(
-    () => new Set(PRESETS.map((p) => `${p.width}x${p.height}`))
-  )
+  const [batchCustomSizes, setBatchCustomSizes] = useState<{ width: number; height: number }[]>([])
+  const [batchInputW, setBatchInputW] = useState('')
+  const [batchInputH, setBatchInputH] = useState('')
   const [batchSelectedThemes, setBatchSelectedThemes] = useState<Set<ThemeName>>(
     () => new Set(THEME_NAMES as ThemeName[])
   )
@@ -347,9 +347,8 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
     const { width: srcW, height: srcH } = baseState
     const suffix = !isSvg && rasterScale === 2 ? '@2x' : ''
     const fmt = format as ImageFormat
-    const selectedPresets = PRESETS.filter((p) => batchSelectedSizes.has(`${p.width}x${p.height}`))
     const selectedThemes = THEME_NAMES.filter((t) => batchSelectedThemes.has(t as ThemeName)) as ThemeName[]
-    const total = selectedPresets.length * selectedThemes.length
+    const total = batchCustomSizes.length * selectedThemes.length
     if (total === 0) return
 
     const files: { name: string; data: Uint8Array }[] = []
@@ -357,7 +356,7 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
 
     for (const themeName of selectedThemes) {
       const themeState = stateForTheme(themeName)
-      for (const preset of selectedPresets) {
+      for (const preset of batchCustomSizes) {
         count++
         setBatchProgress(count)
         const remapped: AppState = {
@@ -514,17 +513,21 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
 
         {/* 5 — Batch sizes (standard only) */}
         {!isTriptych && !isLivecard && (() => {
-          const selectedPresetCount = PRESETS.filter((p) => batchSelectedSizes.has(`${p.width}x${p.height}`)).length
           const selectedThemeCount = THEME_NAMES.filter((t) => batchSelectedThemes.has(t as ThemeName)).length
-          const batchFileCount = selectedPresetCount * selectedThemeCount
-          const allSizesSelected = selectedPresetCount === PRESETS.length
           const allThemesSelected = selectedThemeCount === THEME_NAMES.length
+          const batchFileCount = batchCustomSizes.length * selectedThemeCount
 
-          const toggleSize = (key: string) => setBatchSelectedSizes((prev) => {
-            const next = new Set(prev)
-            next.has(key) ? next.delete(key) : next.add(key)
-            return next
-          })
+          const parsedW = parseInt(batchInputW, 10)
+          const parsedH = parseInt(batchInputH, 10)
+          const canAdd = !isNaN(parsedW) && !isNaN(parsedH) && parsedW >= 1 && parsedH >= 1 && parsedW <= 8000 && parsedH <= 8000
+
+          const addSize = () => {
+            if (!canAdd) return
+            setBatchCustomSizes((prev) => [...prev, { width: parsedW, height: parsedH }])
+            setBatchInputW('')
+            setBatchInputH('')
+          }
+
           const toggleTheme = (t: ThemeName) => setBatchSelectedThemes((prev) => {
             const next = new Set(prev)
             next.has(t) ? next.delete(t) : next.add(t)
@@ -533,33 +536,57 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
 
           return (
             <div className="flex flex-col gap-5 pt-4 border-t border-black/[0.07]">
+
+              {/* Size entry */}
               <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-widest text-black/35">Batch sizes</span>
+                <span className="text-[10px] uppercase tracking-widest text-black/35">Batch sizes</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="W"
+                    value={batchInputW}
+                    onChange={(e) => setBatchInputW(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addSize()}
+                    className="w-16 px-2 py-1.5 rounded-lg bg-black/[0.06] border border-black/[0.08] text-xs font-mono text-black/70 placeholder-black/20 outline-none focus:border-black/20 text-center"
+                  />
+                  <span className="text-black/20 text-xs">×</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="H"
+                    value={batchInputH}
+                    onChange={(e) => setBatchInputH(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addSize()}
+                    className="w-16 px-2 py-1.5 rounded-lg bg-black/[0.06] border border-black/[0.08] text-xs font-mono text-black/70 placeholder-black/20 outline-none focus:border-black/20 text-center"
+                  />
                   <button
-                    onClick={() => setBatchSelectedSizes(allSizesSelected ? new Set() : new Set(PRESETS.map((p) => `${p.width}x${p.height}`)))}
-                    className="text-[10px] text-black/30 hover:text-black/60 transition-colors"
+                    onClick={addSize}
+                    disabled={!canAdd}
+                    className="px-3 py-1.5 rounded-lg bg-black/[0.06] text-xs text-black/50 hover:bg-black/[0.11] hover:text-black/75 transition-colors disabled:opacity-30"
                   >
-                    {allSizesSelected ? 'None' : 'All'}
+                    Add
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                  {PRESETS.map((p) => {
-                    const key = `${p.width}x${p.height}`
-                    const checked = batchSelectedSizes.has(key)
-                    return (
-                      <label key={key} className="flex items-center gap-2 cursor-pointer group">
-                        <span className={`w-3.5 h-3.5 rounded shrink-0 border transition-colors flex items-center justify-center ${checked ? 'bg-[#1d0029] border-[#1d0029]' : 'border-black/20 group-hover:border-black/40'}`}>
-                          {checked && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                        </span>
-                        <input type="checkbox" checked={checked} onChange={() => toggleSize(key)} className="sr-only" />
-                        <span className="text-[11px] text-black/50 group-hover:text-black/70 transition-colors font-mono">{p.label}</span>
-                      </label>
-                    )
-                  })}
-                </div>
+
+                {batchCustomSizes.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    {batchCustomSizes.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-[11px] font-mono text-black/50">{s.width} × {s.height}</span>
+                        <button
+                          onClick={() => setBatchCustomSizes((prev) => prev.filter((_, j) => j !== i))}
+                          className="text-black/25 hover:text-black/60 transition-colors text-xs leading-none px-1"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
+              {/* Themes */}
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] uppercase tracking-widest text-black/35">Themes</span>
@@ -591,7 +618,7 @@ function ExportPanel({ isTriptych, isLivecard }: { isTriptych: boolean; isLiveca
                 disabled={isBusy || batchFileCount === 0}
                 className="w-full py-3 rounded-2xl text-xs text-black/50 bg-black/[0.06] hover:bg-black/[0.11] hover:text-black/75 transition-colors disabled:opacity-40"
               >
-                {isBusy ? `${batchProgress}…` : batchFileCount === 0 ? 'Select sizes and themes' : `Export batch · ${batchFileCount} file${batchFileCount !== 1 ? 's' : ''}`}
+                {isBusy ? `${batchProgress}…` : batchFileCount === 0 ? 'Add sizes and select themes' : `Export batch · ${batchFileCount} file${batchFileCount !== 1 ? 's' : ''}`}
               </button>
             </div>
           )
